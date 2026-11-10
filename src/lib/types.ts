@@ -15,6 +15,9 @@ export type Episode = {
   synopsis: string | null;
   status: "draft" | "published";
   published_at: string | null;
+  /** 'free' = everyone; 'paid_early' = admins and supporters until early_until. */
+  access: "free" | "paid_early";
+  early_until: string | null;
   // Used from Stage 2 (voting). Stored now so the schema doesn't change later.
   vote_closes_at: string | null;
   hide_vote_counts: boolean;

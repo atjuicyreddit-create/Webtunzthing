@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { DemoBanner } from "@/components/DemoBanner";
 import { EndCard } from "@/components/EndCard";
+import { LockCard } from "@/components/LockCard";
 import { Reader } from "@/components/Reader";
-import { getCurrentUser, getEpisodePage } from "@/lib/data";
+import { isEarlyLocked } from "@/lib/access";
+import { getCurrentUser, getEpisodePage, getProfile } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 
@@ -40,10 +42,16 @@ export default async function EpisodePage({ params }: Props) {
   const n = parseNumber(number);
   if (!n) notFound();
 
-  const [page, user] = await Promise.all([getEpisodePage(slug, n), getCurrentUser()]);
+  const [page, user, profile] = await Promise.all([
+    getEpisodePage(slug, n),
+    getCurrentUser(),
+    getProfile(),
+  ]);
   if (!page) notFound();
 
   const { series, episode, previous, next, isLatest } = page;
+  const locked = isEarlyLocked(episode, profile);
+  const here = `/series/${series.slug}/episodes/${episode.number}`;
 
   return (
     <>
@@ -53,21 +61,38 @@ export default async function EpisodePage({ params }: Props) {
           {series.title} · Episode {episode.number}
         </p>
         <h1 className="mt-1 text-2xl font-extrabold leading-tight">{episode.title}</h1>
-        <p className="mt-2 text-sm text-muted">Scroll down to read ↓</p>
+        {!locked && <p className="mt-2 text-sm text-muted">Scroll down to read ↓</p>}
+        {episode.status === "draft" && (
+          <p className="mt-2 inline-block rounded-full bg-brand-soft px-3 py-1 text-sm font-bold">
+            Draft — only admins can see this
+          </p>
+        )}
       </div>
 
-      <Reader panels={episode.panels} />
+      {locked ? (
+        <LockCard
+          seriesSlug={series.slug}
+          earlyUntil={episode.early_until}
+          signedIn={Boolean(user)}
+          here={here}
+          previous={previous}
+        />
+      ) : (
+        <>
+          <Reader panels={episode.panels} />
 
-      <EndCard
-        seriesTitle={series.title}
-        seriesSlug={series.slug}
-        episodeNumber={episode.number}
-        episodeTitle={episode.title}
-        isLatest={isLatest}
-        signedIn={Boolean(user)}
-        next={next}
-        previous={previous}
-      />
+          <EndCard
+            seriesTitle={series.title}
+            seriesSlug={series.slug}
+            episodeNumber={episode.number}
+            episodeTitle={episode.title}
+            isLatest={isLatest}
+            signedIn={Boolean(user)}
+            next={next}
+            previous={previous}
+          />
+        </>
+      )}
     </>
   );
 }

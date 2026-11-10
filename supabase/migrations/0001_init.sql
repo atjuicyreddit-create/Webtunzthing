@@ -1,4 +1,4 @@
--- Webzoon — Stage 1 schema.
+-- Pathtoon — Stage 1 schema.
 -- Run this once in Supabase: SQL Editor > New query > paste > Run.
 -- Safe to re-run: everything uses "if not exists" / "or replace".
 

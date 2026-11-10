@@ -1,11 +1,11 @@
 import type { MetadataRoute } from "next";
-import { SITE_NAME } from "@/lib/env";
+import { SITE_NAME, TAGLINE } from "@/lib/env";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: `${SITE_NAME} — comics you steer`,
+    name: `${SITE_NAME} — ${TAGLINE}`,
     short_name: SITE_NAME,
-    description: "Vertical-scroll comics where the readers decide what happens next.",
+    description: `${SITE_NAME}: ${TAGLINE}. Vertical-scroll comics where the readers decide what happens next.`,
     start_url: "/",
     scope: "/",
     display: "standalone",

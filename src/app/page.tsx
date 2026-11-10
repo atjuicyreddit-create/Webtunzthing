@@ -13,7 +13,7 @@ export default async function Home() {
       <div className="mx-auto max-w-2xl px-4 pb-20 pt-8">
         <section className="text-center">
           <h1 className="text-4xl font-extrabold leading-tight sm:text-5xl">
-            Comics <span className="text-brand">you steer.</span>
+            Stories <span className="text-brand">you steer.</span>
           </h1>
           <p className="mx-auto mt-3 max-w-md text-lg text-muted">
             Read free. Then suggest what happens next &mdash; the top-voted idea becomes the
@@ -31,7 +31,7 @@ export default async function Home() {
               <p className="text-xl font-bold">No comics here yet.</p>
               <p className="mt-2 text-muted">
                 Run the seed file in Supabase (see the README) to add Morning Brew, or
-                create a series from the admin area once it&rsquo;s built.
+                create a series from the admin area.
               </p>
             </div>
           ) : (

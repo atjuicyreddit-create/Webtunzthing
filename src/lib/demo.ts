@@ -22,6 +22,8 @@ export const DEMO_EPISODES: EpisodeWithPanels[] = [
     synopsis: data.episode.synopsis,
     status: "published",
     published_at: "2026-11-10T09:00:00Z",
+    access: "free",
+    early_until: null,
     vote_closes_at: null,
     hide_vote_counts: false,
     panels: data.panels.map((p) => ({

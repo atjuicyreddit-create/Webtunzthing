@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { LoginForm } from "@/components/LoginForm";
-import { hasSupabaseEnv } from "@/lib/env";
+import { SITE_NAME, TAGLINE, hasSupabaseEnv } from "@/lib/env";
 
-export const metadata: Metadata = { title: "Sign in" };
+export const metadata: Metadata = {
+  title: "Sign in",
+  description: `Sign in to ${SITE_NAME} — ${TAGLINE}.`,
+};
 export const dynamic = "force-dynamic";
 
 function safeNext(value: string | undefined): string {
@@ -19,7 +22,8 @@ export default async function LoginPage({
 
   return (
     <div className="mx-auto max-w-md px-4 pb-20 pt-10">
-      <h1 className="text-3xl font-extrabold">Sign in</h1>
+      <h1 className="text-3xl font-extrabold">Sign in to {SITE_NAME}</h1>
+      <p className="mt-1 font-bold text-brand">{TAGLINE}</p>
       <p className="mt-2 text-muted">
         Free for now. Signing in lets you suggest what happens next and vote on other
         people&rsquo;s ideas.

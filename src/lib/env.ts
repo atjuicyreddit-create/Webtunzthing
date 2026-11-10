@@ -28,7 +28,8 @@ export function siteUrl(): string {
   return raw.replace(/\/$/, "");
 }
 
-export const SITE_NAME = "Webzoon";
+export const SITE_NAME = "Pathtoon";
+export const TAGLINE = "stories you steer";
 
 // Feature flag for the future £2.99/month plan. Payments are NOT built in v1;
 // this only exists so later stages can gate commenting/voting behind a plan.

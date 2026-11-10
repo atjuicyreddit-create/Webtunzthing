@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/admin";
 import { hasSupabaseEnv, supabaseAnonKey, supabaseUrl } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Setup check", robots: { index: false } };
 export const dynamic = "force-dynamic";
 
 // A friendly "is everything plugged in?" page. It shows a tick or cross for each
-// setting and NEVER shows the values themselves. Stage 3 will move this behind
-// the admin login; until then it only reveals whether a key is present.
+// setting and NEVER shows the values themselves. Admin-only, since Stage 3.
 
 type Row = { label: string; ok: boolean; hint: string; optional?: boolean };
 
@@ -35,6 +35,8 @@ async function checkSupabase(): Promise<{ reachable: boolean; schema: boolean; s
 }
 
 export default async function SetupPage() {
+  // Demo mode has no admin to check, so the page stays open there to help set up.
+  if (hasSupabaseEnv()) await requireAdmin("/setup");
   const sb = await checkSupabase();
 
   const rows: Row[] = [
@@ -61,7 +63,7 @@ export default async function SetupPage() {
     {
       label: "Service role key is set (server only)",
       ok: present("SUPABASE_SERVICE_ROLE_KEY"),
-      hint: "Needed from Stage 3 (admin). Never prefix it with NEXT_PUBLIC_.",
+      hint: "Not used yet. If you add it, never prefix it with NEXT_PUBLIC_.",
       optional: true,
     },
     {
@@ -72,7 +74,7 @@ export default async function SetupPage() {
     {
       label: "Admin email is set",
       ok: present("ADMIN_EMAIL"),
-      hint: "The email you sign in with. Needed from Stage 3.",
+      hint: "Optional. Admin rights come from profiles.role in Supabase (see the README).",
       optional: true,
     },
     {

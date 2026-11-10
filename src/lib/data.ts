@@ -8,6 +8,13 @@ import type { Episode, EpisodePage, Series } from "./types";
 
 export const isDemoMode = () => !hasSupabaseEnv();
 
+export type SeriesEpisode = Pick<
+  Episode,
+  "number" | "title" | "synopsis" | "published_at" | "status" | "access" | "early_until"
+>;
+
+export type Profile = { role: "reader" | "admin"; plan: "free" | "supporter" };
+
 export async function getAllSeries(): Promise<Series[]> {
   if (isDemoMode()) return [DEMO_SERIES];
   const supabase = await createClient();
@@ -20,7 +27,7 @@ export async function getAllSeries(): Promise<Series[]> {
 
 export async function getSeriesPage(slug: string): Promise<{
   series: Series;
-  episodes: Pick<Episode, "number" | "title" | "synopsis" | "published_at">[];
+  episodes: SeriesEpisode[];
 } | null> {
   if (isDemoMode()) {
     if (slug !== DEMO_SERIES.slug) return null;
@@ -35,7 +42,7 @@ export async function getSeriesPage(slug: string): Promise<{
   if (!series) return null;
   const { data: episodes } = await supabase
     .from("episodes")
-    .select("number,title,synopsis,published_at")
+    .select("number,title,synopsis,published_at,status,access,early_until")
     .eq("series_id", series.id)
     .order("number", { ascending: true });
   return { series: series as Series, episodes: episodes ?? [] };
@@ -97,4 +104,20 @@ export async function getCurrentUser() {
     data: { user },
   } = await supabase.auth.getUser();
   return user;
+}
+
+// The signed-in person's role and plan (null when signed out or in demo mode).
+export async function getProfile(): Promise<Profile | null> {
+  if (isDemoMode()) return null;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from("profiles")
+    .select("role,plan")
+    .eq("id", user.id)
+    .maybeSingle();
+  return (data as Profile) ?? null;
 }

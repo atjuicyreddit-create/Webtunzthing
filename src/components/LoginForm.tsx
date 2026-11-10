@@ -63,7 +63,7 @@ export function LoginForm({ next }: { next: string }) {
         <div role="status" className="rounded-3xl bg-brand-soft p-5">
           <p className="text-lg font-extrabold">Check your email</p>
           <p className="mt-1">
-            We&rsquo;ve sent a sign-in link to <strong>{email}</strong>. Open it in{" "}
+            We&rsquo;ve sent a Pathtoon sign-in link to <strong>{email}</strong>. Open it in{" "}
             <strong>this same browser</strong> to finish signing in.
           </p>
         </div>

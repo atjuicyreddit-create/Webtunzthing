@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { ThemeToggle } from "./ThemeToggle";
-import { getCurrentUser } from "@/lib/data";
+import { getCurrentUser, getProfile } from "@/lib/data";
 import { SITE_NAME } from "@/lib/env";
 
 // Slim on purpose: the comic is the hero, the chrome is second.
 export async function Header() {
-  const user = await getCurrentUser();
+  const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
+  const isAdmin = profile?.role === "admin";
 
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-bg/90 backdrop-blur">
@@ -17,6 +18,11 @@ export async function Header() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          {isAdmin && (
+            <Link href="/admin" className="btn btn-quiet !min-h-11 !px-4 text-sm">
+              Admin
+            </Link>
+          )}
           {user ? (
             <form action="/auth/signout" method="post">
               <button type="submit" className="btn btn-quiet !min-h-11 !px-4 text-sm">

@@ -1,4 +1,4 @@
-# Webzoon — comics you steer (Stage 1)
+# Pathtoon — stories you steer
 
 A mobile-first website (installable PWA) for vertical-scroll comics. Readers sign in,
 read the current free story, and (from Stage 2) comment on what should happen next.
@@ -8,7 +8,8 @@ the comics live here.
 **Stage 1 (this build):** project setup, sign-in (Google + email link), database,
 Morning Brew episode 1 with 12 placeholder panels, the vertical reader, share links,
 social preview images, and PWA basics.
-**Not built yet:** comments and voting (Stage 2), admin (Stage 3), story builder (Stage 4).
+**Stage 3 (admin):** see section 6 below.
+**Not built yet:** comments and voting (Stage 2), story builder (Stage 4).
 **Never in v1:** payments. A `SUBSCRIPTIONS_ENABLED` flag and `role`/`plan` columns are ready for later.
 
 > **It works before you set anything up.** With no keys it runs in *demo mode* using
@@ -144,7 +145,7 @@ Check:
 - [ ] **Share this episode** opens your phone's share sheet.
 - [ ] **Sign in** works with Google and with the email link, and the button then says **Sign out**.
 - [ ] Light/dark switch works (button in the header: Auto / Light / Dark).
-- [ ] **Install:** Chrome menu > *Add to Home screen* (Android) or Share > *Add to Home Screen* (iPhone). It opens full-screen with the Webzoon icon.
+- [ ] **Install:** Chrome menu > *Add to Home screen* (Android) or Share > *Add to Home Screen* (iPhone). It opens full-screen with the Pathtoon icon.
 - [ ] Pasting an episode link into WhatsApp or Messages shows a preview card with the title.
 
 On your own Wi-Fi you can also run `npm run dev:phone` and open `http://YOUR-PC-IP:3000`
@@ -152,9 +153,9 @@ on the phone (Windows may ask to allow Node through the firewall). Sign-in won't
 
 ---
 
-## 5. Uploading the real Morning Brew panels later
+## 5. Uploading panels by hand (older method)
 
-Admin upload arrives in Stage 3. Until then, by hand:
+The admin area (section 6) does this for you. If you ever need to do it manually:
 
 1. Export each panel as an image **800px wide** (draw at 1600px and halve it) — JPG or WebP
    keeps it fast. Name them `ep1-01.jpg`, `ep1-02.jpg`, and so on.
@@ -191,3 +192,20 @@ is only for server code from Stage 3 and must never be exposed.
 Hooks left for later: `episodes.vote_closes_at` and `hide_vote_counts` (voting, Stage 2),
 `profiles.plan` and `subscriptionsEnabled()` in `src/lib/env.ts` (paid plan), and a clean
 spot for image generation in the Stage 4 story builder (out of scope for v1).
+
+---
+
+## 6. The admin area (Stage 3)
+
+1. Run `supabase/migrations/0002_admin_access.sql` once in the Supabase SQL Editor
+   (adds free / paid-early episodes and the panel re-order function).
+2. Sign in as the admin account (see 2b). An **Admin** button appears in the header.
+3. **Admin > New series**, then **New episode**. Episodes start as drafts.
+4. On the episode page: **Add panel images** (pick them all at once; they are shrunk and
+   uploaded from your phone), re-order with the arrows, set the gap after each panel,
+   choose **Free** or **Paid early** (+ the date it becomes free), then **Publish now**.
+
+Paid-early episodes: admins and anyone whose `profiles.plan` is `supporter` can read them
+straight away; everyone else sees a lock card until the "free from" date. There are no
+payments yet, so set a supporter by hand:
+`update public.profiles set plan = 'supporter' where email = '...';`

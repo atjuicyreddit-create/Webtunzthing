@@ -2,13 +2,12 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { RegisterServiceWorker } from "@/components/RegisterServiceWorker";
-import { SITE_NAME, siteUrl } from "@/lib/env";
+import { SITE_NAME, TAGLINE, siteUrl } from "@/lib/env";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
-  title: { default: `${SITE_NAME} — comics you steer`, template: `%s · ${SITE_NAME}` },
-  description:
-    "Vertical-scroll comics where the readers decide what happens next. Read free, then comment and vote on the next episode.",
+  title: { default: `${SITE_NAME} — ${TAGLINE}`, template: `%s · ${SITE_NAME}` },
+  description: `${SITE_NAME}: ${TAGLINE}. Vertical-scroll comics where the readers decide what happens next. Read free, then comment and vote on the next episode.`,
   applicationName: SITE_NAME,
   appleWebApp: { capable: true, title: SITE_NAME, statusBarStyle: "default" },
   openGraph: { siteName: SITE_NAME, type: "website" },

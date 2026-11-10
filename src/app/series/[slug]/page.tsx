@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DemoBanner } from "@/components/DemoBanner";
-import { getSeriesPage } from "@/lib/data";
+import { formatDate, isEarlyLocked } from "@/lib/access";
+import { getProfile, getSeriesPage } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function SeriesPage({ params }: Props) {
   const { slug } = await params;
-  const page = await getSeriesPage(slug);
+  const [page, profile] = await Promise.all([getSeriesPage(slug), getProfile()]);
   if (!page) notFound();
 
   const { series, episodes } = page;
@@ -73,9 +74,20 @@ export default async function SeriesPage({ params }: Props) {
                   <span className="grid size-11 shrink-0 place-items-center rounded-full bg-brand-soft text-lg font-extrabold">
                     {e.number}
                   </span>
-                  <span>
+                  <span className="min-w-0 flex-1">
                     <span className="block font-bold">{e.title}</span>
                     {e.synopsis && <span className="block text-sm text-muted">{e.synopsis}</span>}
+                    {e.status === "draft" && (
+                      <span className="mt-1 inline-block rounded-full bg-brand-soft px-2 py-0.5 text-xs font-bold">
+                        Draft (admins only)
+                      </span>
+                    )}
+                    {isEarlyLocked(e, profile) && (
+                      <span className="mt-1 inline-block rounded-full bg-brand-soft px-2 py-0.5 text-xs font-bold">
+                        🔒 Early access
+                        {e.early_until ? ` · free ${formatDate(e.early_until)}` : ""}
+                      </span>
+                    )}
                   </span>
                 </Link>
               </li>
