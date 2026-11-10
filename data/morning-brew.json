@@ -1,0 +1,28 @@
+{
+  "_note": "Single source of truth for the Morning Brew starter content. The demo mode in src/lib/demo.ts reads it, and `npm run seed:sql` turns it into supabase/seed.sql. Replace the placeholder panels with real art later (see README).",
+  "series": {
+    "slug": "morning-brew",
+    "title": "Morning Brew",
+    "tagline": "A cosy fantasy kitchen comedy.",
+    "description": "Pudding the duck has one job in the Lower Muddle kitchens: make the morning brew. Great-Aunt Mallow, the goose witch, has other ideas. You decide what happens next."
+  },
+  "episode": {
+    "number": 1,
+    "title": "Morning Brew",
+    "synopsis": "A short duck comedy in 12 panels."
+  },
+  "panels": [
+    { "position": 1, "height": 1200, "gap_after": 200 },
+    { "position": 2, "height": 1000, "gap_after": 250 },
+    { "position": 3, "height": 1400, "gap_after": 600 },
+    { "position": 4, "height": 1100, "gap_after": 200 },
+    { "position": 5, "height": 1300, "gap_after": 300 },
+    { "position": 6, "height": 1000, "gap_after": 700 },
+    { "position": 7, "height": 1500, "gap_after": 150 },
+    { "position": 8, "height": 1000, "gap_after": 250 },
+    { "position": 9, "height": 1200, "gap_after": 500 },
+    { "position": 10, "height": 1100, "gap_after": 200 },
+    { "position": 11, "height": 1600, "gap_after": 1100 },
+    { "position": 12, "height": 1400, "gap_after": 0 }
+  ]
+}

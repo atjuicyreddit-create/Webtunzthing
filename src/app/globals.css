@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------
+   Colour tokens. Change the brand colour here and the whole site follows.
+   Contrast checked: body text 14.9:1, muted text 6.2:1, button text 5.0:1.
+   --------------------------------------------------------------------- */
+:root {
+  --bg: #fff8ef;
+  --surface: #ffffff;
+  --line: #ecd9c4;
+  --ink: #2b2118;
+  --muted: #6b5b4b;
+  --brand: #b8501a;
+  --brand-ink: #ffffff;
+  --brand-soft: #fde8d3;
+  color-scheme: light;
+}
+
+/* Dark by system preference, unless the reader has picked light. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1c1713;
+    --surface: #271f19;
+    --line: #3d3128;
+    --ink: #fff3e4;
+    --muted: #b8a898;
+    --brand: #f0a25c;
+    --brand-ink: #2a1608;
+    --brand-soft: #3a2616;
+    color-scheme: dark;
+  }
+}
+
+/* Dark when the reader has picked dark. */
+:root[data-theme="dark"] {
+  --bg: #1c1713;
+  --surface: #271f19;
+  --line: #3d3128;
+  --ink: #fff3e4;
+  --muted: #b8a898;
+  --brand: #f0a25c;
+  --brand-ink: #2a1608;
+  --brand-soft: #3a2616;
+  color-scheme: dark;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+}
+
+/* Big, obvious tap targets (44px+ is the accessibility minimum). */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3rem;
+  padding: 0.5rem 1.25rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  text-align: center;
+  transition: transform 0.08s ease, opacity 0.15s ease;
+}
+.btn:active {
+  transform: scale(0.98);
+}
+.btn-primary {
+  background: var(--brand);
+  color: var(--brand-ink);
+}
+.btn-quiet {
+  background: var(--surface);
+  color: var(--ink);
+  border: 2px solid var(--line);
+}
+
+:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* The comic is the hero: panels sit edge to edge on a calm background. */
+.panel-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
