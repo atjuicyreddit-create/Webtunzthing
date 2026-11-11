@@ -257,7 +257,14 @@ git config core.hooksPath .githooks
 Each stage that changes the database comes with a file in `supabase/migrations/`. Open
 Supabase > **SQL Editor** > **New query**, paste the whole file, and click **Run**.
 Stage 0's file is `0005_studio_foundation.sql`. Then open `/studio/health`: every Stage 0 row
-should say OK.
+should say OK. The files so far run in order, `0005` to `0010` (Stage 5: panels and lessons).
+
+### Panels and lettering (Stage 5)
+
+Panel images are made one panel at a time (2K, about 6¢ each, up to 3 takes a panel). Before any
+spend, a free check and Claude's pre-check (under 1¢) must pass. Lettering is drawn in code with
+`sharp` and `opentype.js` and the fonts in `src/fonts/lettering/`, so it's free and can be redone
+in seconds. Lessons you approve on **Lessons** go into every matching prompt.
 
 ### Step 5. Add the same keys to the live site
 

@@ -85,6 +85,7 @@ export default async function SettingsPage({
                   ["episode_claude_cap_usd", "Claude per episode ($)", settings.episode_claude_cap_usd, "0.01"],
                   ["session_cap_usd", "Everything per day ($)", settings.session_cap_usd, "0.01"],
                   ["warn_at_percent", "Warn at (% of a limit)", Math.round(settings.warn_at * 100), "1"],
+                  ["max_takes_per_panel", "Takes per panel (max)", settings.max_takes_per_panel, "1"],
                 ] as const
               ).map(([name, label, value, step]) => (
                 <div key={name}>

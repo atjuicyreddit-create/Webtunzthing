@@ -201,6 +201,7 @@ export async function saveSettings(form: FormData) {
     episode_claude_cap_usd: num(form, "episode_claude_cap_usd", 0, 1000),
     session_cap_usd: num(form, "session_cap_usd", 0, 10000),
     warn_at: num(form, "warn_at_percent", 1, 100),
+    max_takes_per_panel: num(form, "max_takes_per_panel", 1, 20),
   };
   if (Object.values(caps).some((v) => v === null)) back(here, { error: "Check the limits: each must be a number in range." });
 
@@ -214,6 +215,7 @@ export async function saveSettings(form: FormData) {
       episode_claude_cap_usd: caps.episode_claude_cap_usd,
       session_cap_usd: caps.session_cap_usd,
       warn_at: caps.warn_at! / 100,
+      max_takes_per_panel: Math.round(caps.max_takes_per_panel!),
       dry_run: form.get("dry_run") === "on",
       updated_at: new Date().toISOString(),
     })

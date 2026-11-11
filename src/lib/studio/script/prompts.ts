@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { aiClaude, estimateClaudeUsd, type Effort } from "../ai/aiCall";
+import { activeLessons } from "../lessons/lessons";
 import type { StudioSettings } from "../settings";
 import { SYSTEM, storyContext } from "../story/prompts";
 import type { Story } from "../story/story";
@@ -166,6 +167,9 @@ export async function runScriptAction<T>(
   cur: Current,
 ): Promise<{ ok: true; data: T; note: string } | { ok: false; reason: string }> {
   const req = build(s, ep, a, cur);
+  // Approved, active writing lessons go into the script check and the draft.
+  const lessons = await activeLessons(supabase, "writing", s.project.id, s.characters.map((c) => c.name));
+  const user = lessons.length ? `${req.user}\n\nACTIVE WRITING LESSONS (also check against these):\n${lessons.map((l) => `- ${l.lesson}`).join("\n")}` : req.user;
   const r = await aiClaude({
     supabase,
     projectId: s.project.id,
@@ -173,7 +177,7 @@ export async function runScriptAction<T>(
     purpose: req.purpose,
     role: "story",
     system: SYSTEM,
-    messages: [{ role: "user", content: req.user }],
+    messages: [{ role: "user", content: user }],
     maxTokens: req.maxTokens,
     effort: req.effort,
     schema: req.schema,

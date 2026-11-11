@@ -1,7 +1,7 @@
 # Pathtoon Studio: resources
 
 Everything the studio needs, in one place. Kept up to date at every stage.
-Last updated: 11 November 2026 (Stage 4).
+Last updated: 11 November 2026 (Stage 5).
 
 ## Services and keys
 
@@ -36,10 +36,10 @@ Never give a secret a `NEXT_PUBLIC_` prefix.
 | `@anthropic-ai/sdk` | Official Claude client. Only `src/lib/studio/ai/aiCall.ts` may import it |
 | `server-only` | Makes the build fail if server code (keys, gateway) is ever imported into the browser |
 | `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities` | Drag and drop on the structure board, with keyboard and touch support |
+| `sharp` | Lettering: composites the lettering onto panel images, resizes, free image checks (stage 5) |
+| `opentype.js` (+ `@types/opentype.js`) | Turns lettering text into vector outlines with the bundled fonts, so it renders the same everywhere (stage 5) |
 
-Later stages will add `sharp`-based lettering (stage 5; sharp is already installed).
-
-## Fonts (SIL Open Font Licence, bundled in `src/fonts/studio/`)
+## Fonts (SIL Open Font Licence; interface fonts in `src/fonts/studio/`, lettering fonts in `src/fonts/lettering/`)
 
 | Font | Role |
 |---|---|
@@ -116,3 +116,15 @@ Images go through `aiImageStart` / `aiImagePoll` in `src/lib/studio/ai/aiCall.ts
 The Morning Brew test import reads `studio-reference/morning-brew/` on your computer, so it only works locally. So does the reference-sheet import (`studio-reference/studio-assets/morning-brew-test-pack/refs/`), test projects only.
 
 Functions: `studio_reserve_ai_call` (checks limits and reserves cost, under a lock), `studio_finish_ai_call`.
+
+Stage 5 (migration `0010_studio_panels.sql`, admin-only):
+
+| Table | Holds |
+|---|---|
+| `studio_panels` | One row per script panel: chosen take, expression line, Claude's pre-check, lettering layout (data), lettered file, Claude's QA findings |
+
+New columns on `studio_takes`: lessons applied, references sent, the take it fixes and the one change, script fingerprint, free QA results, your checklist ticks, rejected and why. New columns on `studio_lessons`: project, key-lesson flag, edit-log reference. New setting: `max_takes_per_panel` (default 3). The six key lessons from the brief are inserted approved and switched on.
+
+New database rules: a panel's chosen image is never exploration art, and must be a finished, checklist-ticked, not-rejected image of that same panel; a lesson can only be switched on once approved.
+
+The masters import (`studio-reference/studio-assets/morning-brew-test-pack/`) and the edit-log import (`studio-reference/EDIT-LOG.md`) only work locally.

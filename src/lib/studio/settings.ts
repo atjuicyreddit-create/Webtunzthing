@@ -14,6 +14,8 @@ export type StudioSettings = {
   dry_run: boolean;
   /** KIE bills in credits; this turns credits into dollars for the ledger (added in Stage 4). */
   kie_usd_per_credit: number;
+  /** At most this many final takes per panel (Stage 5, default 3). */
+  max_takes_per_panel: number;
   updated_at: string;
 };
 
@@ -27,6 +29,7 @@ export async function getStudioSettings(supabase: SupabaseClient): Promise<Studi
     session_cap_usd: Number(data.session_cap_usd),
     warn_at: Number(data.warn_at),
     kie_usd_per_credit: data.kie_usd_per_credit === undefined ? 0.005 : Number(data.kie_usd_per_credit),
+    max_takes_per_panel: data.max_takes_per_panel === undefined ? 3 : Number(data.max_takes_per_panel),
   } as StudioSettings;
 }
 

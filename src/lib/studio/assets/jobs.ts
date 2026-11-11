@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { aiImageAbandon, aiImagePoll, aiImageStart, type ImageRef } from "../ai/aiCall";
+import { runAutoQa } from "../panels/panels";
 import { fullPrompt } from "./prompts";
 import { readStudioFile, uploadStudioFile } from "./storage";
 import type { Asset } from "./types";
@@ -119,9 +120,9 @@ export async function pollJob(supabase: SupabaseClient, jobId: string): Promise<
   if (job.status === "done" || job.status === "failed") return job.status;
   const { data: take } = await supabase
     .from("studio_takes")
-    .select("id,asset_id,cost_usd")
+    .select("id,asset_id,cost_usd,episode_id,panel_key")
     .eq("job_id", job.id)
-    .maybeSingle<{ id: string; asset_id: string | null; cost_usd: number }>();
+    .maybeSingle<{ id: string; asset_id: string | null; cost_usd: number; episode_id: string | null; panel_key: string | null }>();
 
   const fail = async (reason: string, cost: number) => {
     await supabase.from("studio_jobs").update({ status: "failed", error: reason.slice(0, 300), updated_at: new Date().toISOString() }).eq("id", job.id);
@@ -146,7 +147,8 @@ export async function pollJob(supabase: SupabaseClient, jobId: string): Promise<
   if (r.state === "failed") return fail(r.reason, r.costUsd);
 
   if (!take) return fail("The image finished, but its take was deleted.", r.costUsd);
-  const path = `projects/${job.project_id}/assets/${take.asset_id ?? "panels"}/${take.id}.${extOf(r.contentType)}`;
+  const folder = take.asset_id ? `assets/${take.asset_id}` : `panels/${take.episode_id}/${take.panel_key}`;
+  const path = `projects/${job.project_id}/${folder}/${take.id}.${extOf(r.contentType)}`;
   const stored = await uploadStudioFile(supabase, path, r.bytes, r.contentType);
   if (!stored) return fail("The image was made (and charged) but couldn't be saved to storage.", r.costUsd);
   await supabase.from("studio_takes").update({ status: "ready", storage_path: path, cost_usd: r.costUsd }).eq("id", take.id);
@@ -154,5 +156,13 @@ export async function pollJob(supabase: SupabaseClient, jobId: string): Promise<
     .from("studio_jobs")
     .update({ status: "done", credits_after: r.creditsAfter, topup: r.topup, updated_at: new Date().toISOString() })
     .eq("id", job.id);
+  // Panel art gets the free checks straight away (size, shape, colours, camera match, copies).
+  if (take.panel_key) {
+    try {
+      await runAutoQa(supabase, take.id, r.bytes);
+    } catch {
+      // A failed check never loses the image; it can be re-run from the page.
+    }
+  }
   return "done";
 }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 // The studio's left-hand stepper. Stages unlock as they're built (docs/studio/OPUS-BUILD.md).
-export const BUILT_STAGE = 4;
+export const BUILT_STAGE = 5;
 
 type StepKey = "idea" | "story" | "structure" | "script" | "assets" | "panels" | "preview" | "history" | "publish";
 
@@ -11,7 +11,7 @@ const STEPS: { key: StepKey; label: string; stage: number; gate?: string; href?:
   { key: "structure", label: "Structure board", stage: 2, href: (id) => `/studio/projects/${id}/structure` },
   { key: "script", label: "Script", stage: 3, gate: "Script final", href: (id) => `/studio/projects/${id}/script` },
   { key: "assets", label: "Assets", stage: 4, gate: "Asset designs approved", href: (id) => `/studio/projects/${id}/assets` },
-  { key: "panels", label: "Panels", stage: 5, gate: "Panels approved" },
+  { key: "panels", label: "Panels", stage: 5, gate: "Panels approved", href: (id) => `/studio/projects/${id}/panels` },
   { key: "preview", label: "Preview & stitch", stage: 6 },
   { key: "history", label: "History & costs", stage: 6 },
   { key: "publish", label: "Publish", stage: 7, gate: "Publish" },

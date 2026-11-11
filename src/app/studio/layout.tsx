@@ -53,6 +53,9 @@ export default async function StudioLayout({ children }: { children: React.React
             <Link href="/studio" className="inline-flex min-h-11 items-center rounded-lg px-3 hover:bg-[var(--s-charcoal)]">
               Projects
             </Link>
+            <Link href="/studio/lessons" className="inline-flex min-h-11 items-center rounded-lg px-3 hover:bg-[var(--s-charcoal)]">
+              Lessons
+            </Link>
             <Link href="/studio/settings" className="inline-flex min-h-11 items-center rounded-lg px-3 hover:bg-[var(--s-charcoal)]">
               Settings &amp; costs
             </Link>

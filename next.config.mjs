@@ -14,6 +14,8 @@ const nextConfig = {
   serverExternalPackages: ["@anthropic-ai/sdk"],
   // Studio reference images are uploaded through a server action (4 MB max, checked there).
   experimental: { serverActions: { bodySizeLimit: "5mb" } },
+  // sharp is native; keep it out of the bundle. The lettering fonts are read from disk at run time.
+  outputFileTracingIncludes: { "/studio/**": ["./src/fonts/lettering/**"] },
   images: {
     // Panels are plain <img> tags (see src/components/Reader.tsx), so this is
     // only here for any future next/image use with Supabase Storage.
