@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useFormStatus } from "react-dom";
 import { saveSeries } from "@/app/admin/actions";
 import { slugify } from "@/lib/slug";
 import type { Series } from "@/lib/types";
@@ -92,9 +93,16 @@ export function SeriesForm({ series }: { series?: Series }) {
         />
       </Field>
 
-      <button type="submit" className="btn btn-primary w-full">
-        {series ? "Save series" : "Create series"}
-      </button>
+      <SubmitButton label={series ? "Save series" : "Create series"} />
     </form>
+  );
+}
+
+function SubmitButton({ label }: { label: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" disabled={pending} className="btn btn-primary w-full disabled:opacity-60">
+      {pending ? "Saving…" : label}
+    </button>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useFormStatus } from "react-dom";
 import {
   publishEpisode,
   saveEpisode,
@@ -105,30 +106,47 @@ export function EpisodeForm({ seriesId, nextNumber, episode, panelCount = 0 }: P
         )}
       </fieldset>
 
-      {/* Sticky so the buttons are always under your thumb on a phone. */}
-      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-bg/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
-        <div className="mx-auto flex max-w-2xl gap-2">
-          <button type="submit" formAction={saveEpisodeOnly} className="btn btn-quiet flex-1 whitespace-nowrap !px-3">
-            {episode ? "Save" : "Create episode"}
-          </button>
-          {published ? (
-            <button type="submit" formAction={unpublishEpisode} className="btn btn-quiet flex-1 whitespace-nowrap !px-3">
-              Unpublish
-            </button>
-          ) : (
-            episode && (
-              <button
-                type="submit"
-                formAction={publishEpisode}
-                disabled={panelCount === 0}
-                className="btn btn-primary flex-1 whitespace-nowrap !px-3 disabled:opacity-50"
-              >
-                {panelCount === 0 ? "Add panels first" : "Publish now"}
-              </button>
-            )
-          )}
-        </div>
-      </div>
+      <SaveBar isNew={!episode} published={published} panelCount={panelCount} />
     </form>
+  );
+}
+
+// Sticky so the buttons are always under your thumb on a phone. While a save is
+// running, every button is disabled and says so, so a slow tap can't double-submit.
+function SaveBar({
+  isNew,
+  published,
+  panelCount,
+}: {
+  isNew: boolean;
+  published: boolean;
+  panelCount: number;
+}) {
+  const { pending } = useFormStatus();
+  const cls = "btn flex-1 whitespace-nowrap !px-3 disabled:opacity-50";
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-bg/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
+      <div className="mx-auto flex max-w-2xl gap-2" aria-live="polite">
+        <button type="submit" formAction={saveEpisodeOnly} disabled={pending} className={`${cls} btn-quiet`}>
+          {pending ? "Saving…" : isNew ? "Create episode" : "Save"}
+        </button>
+        {published ? (
+          <button type="submit" formAction={unpublishEpisode} disabled={pending} className={`${cls} btn-quiet`}>
+            {pending ? "Please wait…" : "Unpublish"}
+          </button>
+        ) : (
+          !isNew && (
+            <button
+              type="submit"
+              formAction={publishEpisode}
+              disabled={pending || panelCount === 0}
+              className={`${cls} btn-primary`}
+            >
+              {pending ? "Please wait…" : panelCount === 0 ? "Add panels first" : "Publish now"}
+            </button>
+          )
+        )}
+      </div>
+    </div>
   );
 }
