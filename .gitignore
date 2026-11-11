@@ -6,10 +6,17 @@ node_modules
 out
 next-env.d.ts
 
-# secrets — NEVER commit these. .env.example (no real values) is fine to commit.
-.env
-.env.local
-.env.*.local
+# secrets — NEVER commit these. Real keys live in secrets/.env.local only.
+# The example files (no real values) and the secrets README are committed.
+.env*
+!.env.example
+secrets/*
+!secrets/.env.example
+!secrets/README.md
+
+# Studio reference material: internal art, scripts and the asset pack.
+# Kept out of git until Tom confirms the repo is private.
+studio-reference/
 
 # misc
 .DS_Store

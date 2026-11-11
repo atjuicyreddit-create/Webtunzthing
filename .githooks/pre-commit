@@ -1,0 +1,4 @@
+#!/bin/sh
+# Blocks commits that contain anything that looks like a key. See scripts/check-secrets.mjs.
+# Turn on once per clone with:  git config core.hooksPath .githooks
+exec node scripts/check-secrets.mjs
