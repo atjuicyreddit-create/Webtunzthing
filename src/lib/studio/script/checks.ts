@@ -10,7 +10,7 @@ const SFX = [
   "whirr", "whirrr", "vroom", "sizzle", "ding", "buzz", "beep", "tick-tock", "clang", "splat", "swoosh",
   "wham", "bam", "kapow", "fwoosh", "hiss", "thwack", "whack", "clatter", "rumble", "ka-ching", "kerplunk", "zoom",
 ];
-const SFX_RE = new RegExp(`(^|[^a-z])(${SFX.map((w) => w.replace("-", "\\-")).join("|")})($|[^a-z])`, "i");
+export const SFX_RE = new RegExp(`(^|[^a-z])(${SFX.map((w) => w.replace("-", "\\-")).join("|")})($|[^a-z])`, "i");
 
 export function wordCount(s: string | null | undefined): number {
   return (s ?? "").trim().split(/\s+/).filter(Boolean).length;

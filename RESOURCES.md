@@ -1,7 +1,7 @@
 # Pathtoon Studio: resources
 
 Everything the studio needs, in one place. Kept up to date at every stage.
-Last updated: 11 November 2026 (Stage 3).
+Last updated: 11 November 2026 (Stage 4).
 
 ## Services and keys
 
@@ -101,6 +101,18 @@ Stage 3 (migration `0008_studio_script.sql`, admin-only):
 | `studio_props` | The project's prop table (owner, rule) |
 | `studio_forks` | A serial episode's vote card: question, in bounds, locked, backup pick, branches |
 
-The Morning Brew test import reads `studio-reference/morning-brew/` on your computer, so it only works locally.
+Stage 4 (migration `0009_studio_assets.sql`, admin-only):
+
+| Table | Holds |
+|---|---|
+| `studio_assets` | Characters, locations and props found in final scripts: prompt, shape, scope (series or act), picked design, reference image, where each is used |
+| `studio_takes` | Each generated or imported image: exploration / final / imported, prompt, model, size, cost, comment. Images live in the private `studio` bucket under `projects/<id>/` |
+| `studio_jobs` | Image generations in progress: KIE task id, credits before and after, top-up flag |
+
+New database rules (triggers): no "final" panel art before Script final; a take's kind never changes; only a finished image of that asset can be picked; gates approve only in order; a gate that stops being approved turns every later gate stale, with a logged event. New setting: `kie_usd_per_credit` (default $0.005).
+
+Images go through `aiImageStart` / `aiImagePoll` in `src/lib/studio/ai/aiCall.ts` (the only file that talks to KIE). The page polls `/studio/api/jobs` while images generate. KIE endpoints were checked against docs.kie.ai in November 2026.
+
+The Morning Brew test import reads `studio-reference/morning-brew/` on your computer, so it only works locally. So does the reference-sheet import (`studio-reference/studio-assets/morning-brew-test-pack/refs/`), test projects only.
 
 Functions: `studio_reserve_ai_call` (checks limits and reserves cost, under a lock), `studio_finish_ai_call`.

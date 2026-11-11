@@ -248,6 +248,9 @@ git config core.hooksPath .githooks
 
 1. Go to **kie.ai**, sign in, and open the API key page.
 2. Add `KIE_API_KEY=` followed by the key to `secrets/.env.local`, then restart.
+3. Open `/studio/health`: **KIE** should say OK and show your credit balance (reading it is free).
+4. Images only cost money when dry-run is off (Studio settings). Each option is checked against the
+   episode's image budget and the daily limit before it starts.
 
 ### Step 4. Run the studio's database update (once per stage that has one)
 

@@ -11,6 +11,22 @@ export function morningBrewAvailable(): boolean {
   return fs.existsSync(path.join(DIR, "story.md")) && fs.existsSync(path.join(DIR, "characters.md"));
 }
 
+// The three approved reference sheets from the test pack (Stage 4 import, test project only).
+const REFS_DIR = path.join(process.cwd(), "studio-reference", "studio-assets", "morning-brew-test-pack", "refs");
+const REFS = [
+  { file: "01-pudding-character-v5.jpg", kind: "character" as const, name: "Pudding" },
+  { file: "02-kitchen-v4.jpg", kind: "location" as const, name: "Kitchen" },
+  { file: "03-great-aunt-mallow.jpg", kind: "character" as const, name: "Great-Aunt Mallow" },
+];
+
+export function morningBrewRefsAvailable(): boolean {
+  return REFS.every((r) => fs.existsSync(path.join(REFS_DIR, r.file)));
+}
+
+export function readMorningBrewRefs() {
+  return REFS.map((r) => ({ ...r, bytes: new Uint8Array(fs.readFileSync(path.join(REFS_DIR, r.file))) }));
+}
+
 const clean = (s: string) =>
   s
     .replace(/\*\*/g, "")

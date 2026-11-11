@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { aiClaude, aiImage } from "@/lib/studio/ai/aiCall";
+import { aiClaude, aiImageStart } from "@/lib/studio/ai/aiCall";
+import { removeStudioFolder } from "@/lib/studio/assets/storage";
 import { requireStudio } from "@/lib/studio/auth";
 import { morningBrewAvailable, parseMorningBrew } from "@/lib/studio/seed/morningBrew";
 import { formatUsd, getStudioSettings } from "@/lib/studio/settings";
@@ -60,6 +61,8 @@ export async function deleteProject(form: FormData) {
   if (text(form, "confirm") !== "delete") back(`/studio/projects/${id}`, { error: "Type delete to confirm." });
   const { error } = await supabase.from("studio_projects").delete().eq("id", id);
   if (error) back(`/studio/projects/${id}`, { error: "Couldn't delete the project." });
+  // The project's images live in the private bucket under projects/<id>/; delete them too.
+  await removeStudioFolder(supabase, `projects/${id}`);
   revalidatePath("/studio");
   back("/studio", { deleted: "1" });
 }
@@ -116,7 +119,14 @@ export async function importMorningBrew(form: FormData) {
         position: i + 1,
         title: p.title.slice(0, 120),
         shot: p.shot.slice(0, 120) || null,
-        characters: p.dialogue.length || /pudding/i.test(p.action) ? ["Pudding"] : [],
+        // Everyone named in the visual or speaking ("Mallow" matches "Great-Aunt Mallow").
+        characters: mb.characters
+          .filter((c) => {
+            const short = c.name.split(/\s+/).pop() ?? c.name;
+            const said = p.dialogue.some((d) => d.speaker.toLowerCase().includes(short.toLowerCase()));
+            return said || new RegExp(`\\b(${c.name}|${short})\\b`, "i").test(p.action);
+          })
+          .map((c) => c.name),
         action: p.action.slice(0, 2000),
         caption: p.caption.slice(0, 200) || null,
         dialogue: p.dialogue,
@@ -240,13 +250,17 @@ export async function testClaudeCall(form: FormData) {
 export async function testImageCall(form: FormData) {
   const { supabase } = await requireStudio("/studio/settings");
   const here = "/studio/settings";
-  const r = await aiImage({
+  void form;
+  // A ledger test only. Real images are made on the Assets page, where they're tracked as jobs.
+  const settings = await getStudioSettings(supabase);
+  if (!settings?.dry_run) back(here, { error: "This test only runs in dry-run. Real images are made on a project's Assets page." });
+  const r = await aiImageStart({
     supabase,
     purpose: "Settings: test image (dry run)",
     size: "1K",
-    prompt: "Test only. No image is generated in Stage 0.",
+    aspect: "1:1",
+    prompt: "Test only. No image is generated.",
   });
   if (!r.ok) back(here, { error: r.reason });
-  back(here, { test: r.text });
-  void form;
+  back(here, { test: `[Dry run] No image was made. Estimated cost if real: ${formatUsd(r.estimatedUsd)}.` });
 }

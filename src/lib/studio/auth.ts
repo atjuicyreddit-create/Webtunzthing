@@ -28,6 +28,21 @@ export async function requireStudio(next = "/studio") {
   return { supabase, user };
 }
 
+/** Same check for route handlers: returns null instead of redirecting. */
+export async function studioApiContext() {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+  if (profile?.role !== "admin") return null;
+  const owner = studioOwnerEmail();
+  if (owner && (user.email ?? "").toLowerCase() !== owner) return null;
+  return { supabase, user };
+}
+
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 /** ADMIN_EMAIL, lower-cased, or null if unset or not a valid email (then any admin may enter). */

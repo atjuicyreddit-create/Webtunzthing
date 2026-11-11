@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { withParams } from "@/lib/studio/url";
 import { requireStudio } from "@/lib/studio/auth";
 import { freeChecks } from "@/lib/studio/script/checks";
 import { runScriptAction, type DraftScript } from "@/lib/studio/script/prompts";
@@ -34,8 +35,7 @@ const lines = (s: string, n: number) =>
 
 const page = (id: string, ep: string, extra = "") => `/studio/projects/${id}/script?ep=${ep}${extra}`;
 function go(path: string, params: Record<string, string>): never {
-  const q = new URLSearchParams(params).toString();
-  redirect(`${path}${q ? (path.includes("?") ? "&" : "?") + q : ""}`);
+  redirect(withParams(path, params));
 }
 
 async function ctx(form: FormData) {
@@ -334,7 +334,7 @@ export async function approveScript(form: FormData) {
   if (!gateId) go(page(c.id, c.ep, "#gate"), { error: "Couldn't record the approval." });
   await c.supabase.from("studio_gate_events").insert({ gate_id: gateId, action: "approved", actor: c.user.id, note: row.note, fingerprint: fp });
   refresh(c.id);
-  go(page(c.id, c.ep, "#gate"), { ok: `Script final: v${cur.version} approved. Panels can be generated for this episode from stage 4.` });
+  go(page(c.id, c.ep, "#gate"), { ok: `Script final: v${cur.version} approved. This episode's Assets page is now unlocked.` });
 }
 
 export async function reopenScript(form: FormData) {

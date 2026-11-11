@@ -1,4 +1,4 @@
-import { checkClaudeKey } from "@/lib/studio/ai/aiCall";
+import { checkClaudeKey, checkKieKey } from "@/lib/studio/ai/aiCall";
 import { ownerEmailStatus, requireStudio } from "@/lib/studio/auth";
 import { getStudioSettings } from "@/lib/studio/settings";
 import { hasSupabaseEnv, supabaseAnonKey, supabaseUrl } from "@/lib/env";
@@ -92,14 +92,7 @@ export default async function HealthPage() {
       detail: present("NEXT_PUBLIC_SITE_URL") ? "Set." : "Not set. Use http://localhost:3000 locally.",
     },
     await checkAnthropic(settings?.models.small),
-    {
-      name: "KIE (image generation)",
-      stage: "Stage 4",
-      status: present("KIE_API_KEY") ? "ok" : "later",
-      detail: present("KIE_API_KEY")
-        ? "Key is set. It's checked against KIE when image generation is built (stage 4)."
-        : "Not needed until stage 4. Then set KIE_API_KEY.",
-    },
+    { name: "KIE (image generation)", stage: "Stage 4", ...(await checkKieKey(settings?.kie_usd_per_credit ?? 0.005)) },
     {
       name: "Vercel",
       stage: "Live site",

@@ -12,6 +12,8 @@ export type StudioSettings = {
   session_cap_usd: number;
   warn_at: number;
   dry_run: boolean;
+  /** KIE bills in credits; this turns credits into dollars for the ledger (added in Stage 4). */
+  kie_usd_per_credit: number;
   updated_at: string;
 };
 
@@ -24,6 +26,7 @@ export async function getStudioSettings(supabase: SupabaseClient): Promise<Studi
     episode_claude_cap_usd: Number(data.episode_claude_cap_usd),
     session_cap_usd: Number(data.session_cap_usd),
     warn_at: Number(data.warn_at),
+    kie_usd_per_credit: data.kie_usd_per_credit === undefined ? 0.005 : Number(data.kie_usd_per_credit),
   } as StudioSettings;
 }
 

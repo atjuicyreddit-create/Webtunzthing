@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { withParams } from "@/lib/studio/url";
 import { requireStudio } from "@/lib/studio/auth";
 import { QUESTION_KEYS, questionByKey, type QuestionKey } from "@/lib/studio/story/questions";
 import { runStoryAction } from "@/lib/studio/story/run";
@@ -14,8 +15,7 @@ const t = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const clip = (s: string, n: number) => s.slice(0, n);
 
 function go(path: string, params: Record<string, string>): never {
-  const q = new URLSearchParams(params).toString();
-  redirect(`${path}${q ? (path.includes("?") ? "&" : "?") + q : ""}`);
+  redirect(withParams(path, params));
 }
 
 async function ctx(form: FormData) {

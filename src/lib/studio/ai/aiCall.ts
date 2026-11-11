@@ -280,37 +280,281 @@ export async function checkClaudeKey(
   }
 }
 
+// ====================================================================== images (KIE)
+//
+// KIE works as: create a task -> poll it -> download the result. Checked against KIE's docs
+// (docs.kie.ai, Nov 2026): POST /api/v1/jobs/createTask {model, input{prompt, image_input[],
+// aspect_ratio, resolution, output_format}}, GET /api/v1/jobs/recordInfo?taskId= (state
+// waiting|queuing|generating|success|fail, resultJson {resultUrls}, creditsConsumed),
+// GET /api/v1/chat/credit (balance in data). Errors come back as HTTP 200 with a body code,
+// so every reply's `code` is checked. Uploaded reference files are deleted by KIE after 24h.
+
+const KIE = "https://api.kie.ai";
+const KIE_UPLOAD_HOSTS = ["https://kieai.redpandaai.co", "https://api.kie.ai"];
+
+type KieReply<T> = { code?: number; msg?: string; data?: T };
+
+async function kieFetch<T>(url: string, init: RequestInit = {}, timeoutMs = 15000): Promise<KieReply<T> | null> {
+  try {
+    const r = await fetch(url, {
+      ...init,
+      headers: { Authorization: `Bearer ${process.env.KIE_API_KEY ?? ""}`, ...(init.headers ?? {}) },
+      cache: "no-store",
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    const body = (await r.json().catch(() => null)) as KieReply<T> | null;
+    if (!body) return { code: r.status, msg: `HTTP ${r.status}` };
+    return body;
+  } catch {
+    return null;
+  }
+}
+
+/** Plain-words reason for a KIE error code. Never includes the key or the raw reply. */
+function kieReason(code: number | undefined): string {
+  switch (code) {
+    case 401:
+      return "KIE rejected the key. Check it on /studio/health.";
+    case 402:
+      return "The KIE account is out of credits. Top up on kie.ai, then try again.";
+    case 429:
+      return "KIE is busy (rate limit). Wait a minute and try again.";
+    case 422:
+      return "KIE said the request was invalid.";
+    case 433:
+    case 455:
+    case 505:
+      return "KIE couldn't take this request right now.";
+    default:
+      return `KIE returned an error${code ? ` (${code})` : ""}.`;
+  }
+}
+
+/** The KIE credit balance, or null if it can't be read. Free. */
+async function kieCredits(): Promise<number | null> {
+  const r = await kieFetch<number>(`${KIE}/api/v1/chat/credit`, {}, 8000);
+  return r?.code === 200 && typeof r.data === "number" ? r.data : null;
+}
+
+async function kieUpload(ref: { name: string; bytes: Uint8Array; type: string }): Promise<string | null> {
+  for (const host of KIE_UPLOAD_HOSTS) {
+    const form = new FormData();
+    form.append("file", new Blob([new Uint8Array(ref.bytes)], { type: ref.type }), ref.name);
+    form.append("uploadPath", "pathtoon-studio");
+    form.append("fileName", ref.name);
+    const r = await kieFetch<{ downloadUrl?: string }>(`${host}/api/file-stream-upload`, { method: "POST", body: form }, 30000);
+    if (r?.code === 200 && r.data?.downloadUrl) return r.data.downloadUrl;
+  }
+  return null;
+}
+
+export type ImageRef = { name: string; bytes: Uint8Array; type: string };
+
 export type ImageCall = Common & {
   model?: string;
   size: "1K" | "2K";
+  aspect: string;
   prompt: string;
+  /** Reference images (already read from the studio bucket). Uploaded to KIE first, in this order. */
+  references?: ImageRef[];
 };
 
-/** Images (KIE). Dry-run works now; real generation arrives in Stage 4. */
-export async function aiImage(call: ImageCall): Promise<AiResult> {
+export type ImageStart =
+  | { ok: true; dryRun: true; ledgerId: string; estimatedUsd: number; warn: boolean; percent: number; model: string }
+  | {
+      ok: true;
+      dryRun: false;
+      ledgerId: string;
+      taskId: string;
+      creditsBefore: number | null;
+      estimatedUsd: number;
+      warn: boolean;
+      percent: number;
+      model: string;
+    }
+  | { ok: false; reason: string; ledgerId?: string };
+
+/** What one image would cost, from the price table. */
+export function imagePrice(settings: StudioSettings, size: "1K" | "2K", model?: string): number | null {
+  const m = model ?? settings.models.image;
+  const p = settings.prices.image[`${m}:${size}`];
+  return p === undefined ? null : Number(p);
+}
+
+/** Reserve the cost and start one image task. Returns at once; poll with aiImagePoll. */
+export async function aiImageStart(call: ImageCall): Promise<ImageStart> {
   const settings = await getStudioSettings(call.supabase);
   if (!settings) {
     return { ok: false, reason: "Studio settings are missing. Has the Stage 0 database update been run?" };
   }
   const model = call.model ?? settings.models.image;
-  const price = settings.prices.image[`${model}:${call.size}`];
-  if (price === undefined) {
+  const price = imagePrice(settings, call.size, model);
+  if (price === null) {
     return { ok: false, reason: `No price is set for ${model} at ${call.size}. Add it in Studio settings first.` };
   }
-  if (!settings.dry_run) {
-    return { ok: false, reason: "Real image generation is switched on in Stage 4. Use dry-run for now." };
-  }
-  const r = await reserve(call, "image", model, call.size, call.prompt.slice(0, 4000), price);
+  const refNote = call.references?.length ? `\n[references: ${call.references.map((r) => r.name).join(", ")}]` : "";
+  const r = await reserve(call, "image", model, call.size, `${call.prompt}${refNote}`.slice(0, 4000), price);
   if (!r.ok) return { ok: false, reason: r.reason };
+  if (r.dry_run) {
+    return { ok: true, dryRun: true, ledgerId: r.id, estimatedUsd: price, warn: r.warn, percent: r.percent, model };
+  }
+
+  if (!process.env.KIE_API_KEY?.trim()) {
+    await finish(call.supabase, r.id, "failed", { actualUsd: 0, error: "KIE_API_KEY is not set" });
+    return { ok: false, reason: "The KIE key isn't set up. See /studio/health.", ledgerId: r.id };
+  }
+
+  const creditsBefore = await kieCredits();
+  const rate = settings.kie_usd_per_credit || 0.005;
+  if (creditsBefore !== null && creditsBefore * rate < price) {
+    await finish(call.supabase, r.id, "failed", { actualUsd: 0, creditsBefore, error: "KIE balance too low" });
+    return { ok: false, reason: "The KIE balance is too low for this image. Top up on kie.ai first.", ledgerId: r.id };
+  }
+
+  const imageInput: string[] = [];
+  for (const ref of call.references ?? []) {
+    const url = await kieUpload(ref);
+    if (!url) {
+      await finish(call.supabase, r.id, "failed", { actualUsd: 0, creditsBefore, error: "reference upload failed" });
+      return { ok: false, reason: `Couldn't send the reference image "${ref.name}" to KIE. Nothing was generated or charged.`, ledgerId: r.id };
+    }
+    imageInput.push(url);
+  }
+
+  const created = await kieFetch<{ taskId?: string }>(`${KIE}/api/v1/jobs/createTask`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      input: {
+        prompt: call.prompt.slice(0, 20000),
+        ...(imageInput.length ? { image_input: imageInput.slice(0, 14) } : {}),
+        aspect_ratio: call.aspect,
+        resolution: call.size,
+        output_format: "png",
+      },
+    }),
+  });
+  if (!created || created.code !== 200 || !created.data?.taskId) {
+    await finish(call.supabase, r.id, "failed", { actualUsd: 0, creditsBefore, error: `createTask ${created?.code ?? "no reply"}` });
+    return { ok: false, reason: created ? kieReason(created.code) : "KIE couldn't be reached. Nothing was charged.", ledgerId: r.id };
+  }
   return {
     ok: true,
-    text: `[Dry run] ${model} at ${call.size} was not called. Estimated cost if real: $${price.toFixed(2)}.`,
+    dryRun: false,
     ledgerId: r.id,
-    dryRun: true,
+    taskId: created.data.taskId,
+    creditsBefore,
     estimatedUsd: price,
-    costUsd: 0,
     warn: r.warn,
     percent: r.percent,
     model,
   };
+}
+
+export type ImagePoll =
+  | { state: "pending" }
+  | { state: "done"; bytes: Uint8Array; contentType: string; costUsd: number; creditsAfter: number | null; topup: boolean }
+  | { state: "failed"; reason: string; costUsd: number };
+
+type KieRecord = {
+  state?: string;
+  resultJson?: string | null;
+  failCode?: string | null;
+  failMsg?: string | null;
+  creditsConsumed?: number | null;
+};
+
+/** Check a running image task once. On success, downloads the image and records the real cost. */
+export async function aiImagePoll(p: {
+  supabase: SupabaseClient;
+  ledgerId: string;
+  taskId: string;
+  creditsBefore: number | null;
+  estimatedUsd: number;
+}): Promise<ImagePoll> {
+  const rec = await kieFetch<KieRecord>(`${KIE}/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(p.taskId)}`, {}, 10000);
+  if (!rec) return { state: "pending" }; // network blip: try again on the next poll
+  if (rec.code !== 200) {
+    if (rec.code === 429 || (rec.code ?? 0) >= 500) return { state: "pending" };
+    await finish(p.supabase, p.ledgerId, "failed", { actualUsd: 0, creditsBefore: p.creditsBefore, error: `recordInfo ${rec.code}` });
+    return { state: "failed", reason: kieReason(rec.code), costUsd: 0 };
+  }
+  const d = rec.data ?? {};
+  const settings = await getStudioSettings(p.supabase);
+  const rate = settings?.kie_usd_per_credit || 0.005;
+  const consumedUsd = typeof d.creditsConsumed === "number" && d.creditsConsumed >= 0 ? d.creditsConsumed * rate : null;
+
+  if (d.state === "fail") {
+    const creditsAfter = await kieCredits();
+    const cost = consumedUsd ?? 0;
+    await finish(p.supabase, p.ledgerId, "failed", {
+      actualUsd: cost,
+      creditsBefore: p.creditsBefore,
+      creditsAfter,
+      error: `KIE failed ${d.failCode ?? ""}: ${(d.failMsg ?? "").slice(0, 200)}`,
+    });
+    return { state: "failed", reason: `KIE couldn't make this image${d.failMsg ? `: ${d.failMsg.slice(0, 160)}` : "."}`, costUsd: cost };
+  }
+  if (d.state !== "success") return { state: "pending" };
+
+  let url: string | undefined;
+  try {
+    url = (JSON.parse(d.resultJson ?? "{}") as { resultUrls?: string[] }).resultUrls?.[0];
+  } catch {
+    url = undefined;
+  }
+  const creditsAfter = await kieCredits();
+  // Cost: what KIE says it consumed; else the balance drop; else the estimate. Never negative.
+  const drop = p.creditsBefore !== null && creditsAfter !== null ? (p.creditsBefore - creditsAfter) * rate : null;
+  const cost = consumedUsd ?? (drop !== null && drop > 0 ? drop : p.estimatedUsd);
+  const topup = p.creditsBefore !== null && creditsAfter !== null && creditsAfter > p.creditsBefore;
+
+  let bytes: Uint8Array | null = null;
+  let contentType = "image/png";
+  if (url) {
+    try {
+      const img = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(20000) });
+      if (img.ok) {
+        bytes = new Uint8Array(await img.arrayBuffer());
+        contentType = img.headers.get("content-type")?.split(";")[0] || contentType;
+      }
+    } catch {
+      bytes = null;
+    }
+  }
+  if (!bytes) {
+    // KIE keeps results for 14 days, but we only keep what we've stored. Charged either way.
+    await finish(p.supabase, p.ledgerId, "failed", {
+      actualUsd: cost,
+      creditsBefore: p.creditsBefore,
+      creditsAfter,
+      error: "image made but download failed",
+    });
+    return { state: "failed", reason: "KIE made the image, but it couldn't be downloaded. The cost was logged.", costUsd: cost };
+  }
+  await finish(p.supabase, p.ledgerId, "done", {
+    actualUsd: cost,
+    creditsBefore: p.creditsBefore,
+    creditsAfter,
+    ...(topup ? { error: "Balance went up during this call: a top-up, not counted as spend." } : {}),
+  });
+  return { state: "done", bytes, contentType, costUsd: cost, creditsAfter, topup };
+}
+
+/** Give up on a task that never finished (it may still have been charged by KIE). */
+export async function aiImageAbandon(supabase: SupabaseClient, ledgerId: string, creditsBefore: number | null) {
+  const creditsAfter = await kieCredits();
+  await finish(supabase, ledgerId, "failed", { actualUsd: 0, creditsBefore, creditsAfter, error: "timed out waiting for KIE" });
+}
+
+/** Free key check for /studio/health: reads the credit balance, generates nothing. */
+export async function checkKieKey(rate: number): Promise<{ status: "ok" | "missing" | "problem"; detail: string }> {
+  if (!process.env.KIE_API_KEY?.trim()) return { status: "missing", detail: "KIE_API_KEY is not set." };
+  const r = await kieFetch<number>(`${KIE}/api/v1/chat/credit`, {}, 8000);
+  if (!r) return { status: "problem", detail: "Couldn't reach KIE right now." };
+  if (r.code === 200 && typeof r.data === "number") {
+    return { status: "ok", detail: `Key works. Balance: ${r.data} credits (about $${(r.data * rate).toFixed(2)}).` };
+  }
+  return { status: "problem", detail: kieReason(r.code) };
 }

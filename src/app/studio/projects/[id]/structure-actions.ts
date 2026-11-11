@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { withParams } from "@/lib/studio/url";
 import { requireStudio } from "@/lib/studio/auth";
 import { runStructureAction, type DraftStructure, type ReorderReply } from "@/lib/studio/structure/prompts";
 import { applyOrder, loadStructure, orderSnapshot, writeVersion } from "@/lib/studio/structure/structure";
@@ -22,8 +23,7 @@ const list = (s: string, n = 12) =>
 
 const board = (id: string, extra = "") => `/studio/projects/${id}/structure${extra}`;
 function go(path: string, params: Record<string, string>): never {
-  const q = new URLSearchParams(params).toString();
-  redirect(`${path}${q ? (path.includes("?") ? "&" : "?") + q : ""}`);
+  redirect(withParams(path, params));
 }
 
 async function ctx(projectId: string) {
