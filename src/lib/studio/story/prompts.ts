@@ -27,7 +27,7 @@ export type BuiltRequest = {
 };
 
 // Stable first (cached): role, guidelines, house rules. Changing material goes in `user`.
-const SYSTEM = `You are the story editor inside Pathtoon Studio, helping Tom, a solo creator, turn an idea into a vertical-scroll comic.
+export const SYSTEM = `You are the story editor inside Pathtoon Studio, helping Tom, a solo creator, turn an idea into a vertical-scroll comic.
 Follow the story guidelines and house rules below exactly. They are the source of every question and check.
 Write in British English. Be concrete, short and specific to this story; no generic advice.
 Never invent real people, real brands or existing characters. Never suggest sound effects.
@@ -48,7 +48,7 @@ const obj = (properties: Record<string, unknown>) => ({
 });
 const arr = (items: unknown) => ({ type: "array", items });
 
-function context(s: Story, opts: { includeCharacters?: boolean } = {}): string {
+export function storyContext(s: Story, opts: { includeCharacters?: boolean } = {}): string {
   const p = s.project;
   const lines = [
     `Working title: ${p.title}`,
@@ -82,7 +82,7 @@ function context(s: Story, opts: { includeCharacters?: boolean } = {}): string {
 const DRY = "(dry run)";
 
 export function buildRequest(s: Story, a: StoryAction): BuiltRequest {
-  const ctx = context(s, { includeCharacters: a.kind === "plot" || a.kind === "why_pass" });
+  const ctx = storyContext(s, { includeCharacters: a.kind === "plot" || a.kind === "why_pass" });
 
   switch (a.kind) {
     case "loglines":

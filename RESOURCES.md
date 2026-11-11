@@ -1,7 +1,7 @@
 # Pathtoon Studio: resources
 
 Everything the studio needs, in one place. Kept up to date at every stage.
-Last updated: 11 November 2026 (Stage 1).
+Last updated: 11 November 2026 (Stage 2).
 
 ## Services and keys
 
@@ -35,8 +35,9 @@ Never give a secret a `NEXT_PUBLIC_` prefix.
 |---|---|
 | `@anthropic-ai/sdk` | Official Claude client. Only `src/lib/studio/ai/aiCall.ts` may import it |
 | `server-only` | Makes the build fail if server code (keys, gateway) is ever imported into the browser |
+| `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities` | Drag and drop on the structure board, with keyboard and touch support |
 
-Later stages will add: `@dnd-kit/*` (structure board, stage 2) and `sharp`-based lettering (stage 5; sharp is already installed).
+Later stages will add `sharp`-based lettering (stage 5; sharp is already installed).
 
 ## Fonts (SIL Open Font Licence, bundled in `src/fonts/studio/`)
 
@@ -80,5 +81,15 @@ loglines, one-line test, season summary and destination to `studio_projects`):
 | `studio_characters` | Character sheets (look, colours, costume locks, guardrails…) |
 | `studio_milestones` | A serial's growth milestones, in order |
 | `studio_suggestions` | Claude's plot suggestions, accepted or rejected |
+
+Stage 2 (migration `0007_studio_structure.sql`, admin-only; adds summary and milestone to `studio_episodes`,
+and a `payload` column to `studio_suggestions` for reorder suggestions):
+
+| Table | Holds |
+|---|---|
+| `studio_acts` | Acts within an episode, in order |
+| `studio_scenes` | Scene cards: purpose, beat, characters, location, props, plants, payoffs, real-world step, vote question |
+
+Function: `studio_reorder_episodes` (renumbers episodes in one go).
 
 Functions: `studio_reserve_ai_call` (checks limits and reserves cost, under a lock), `studio_finish_ai_call`.
