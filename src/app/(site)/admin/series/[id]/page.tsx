@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { deleteSeries } from "@/app/admin/actions";
+import { deleteSeries } from "@/app/(site)/admin/actions";
 import { SeriesForm } from "@/components/admin/SeriesForm";
 import { Banner, fieldClass } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/admin";

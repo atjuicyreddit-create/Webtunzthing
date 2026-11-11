@@ -212,3 +212,79 @@ Paid-early episodes: admins and anyone whose `profiles.plan` is `supporter` can 
 straight away; everyone else sees a lock card until the "free from" date. There are no
 payments yet, so set a supporter by hand:
 `update public.profiles set plan = 'supporter' where email = '...';`
+
+---
+
+## 7. Pathtoon Studio (`/studio`)
+
+The studio is where you take a one-line idea to a finished, published comic. It's private:
+only your admin account (the email in `ADMIN_EMAIL`) can open it. The full plan is in
+`docs/studio/STUDIO-PLAN.md`; the list of services and costs is in `RESOURCES.md`.
+
+### Step 1. Move your keys into the secrets folder (once)
+
+1. In the project folder there's a file called `.env.local`. Move it into the `secrets` folder,
+   so it becomes `secrets/.env.local`. (Copy `secrets/.env.example` instead if you're starting
+   fresh, and fill in the values.)
+2. Restart the dev server (`npm run dev`). The studio reads keys from `secrets/.env.local` on the
+   server only.
+3. Never commit, screenshot or paste keys into chat. Git ignores this folder.
+
+Turn on the commit check once per computer, so a key can never be committed by accident:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+### Step 2. Get a Claude key (needed from Stage 1)
+
+1. Go to **platform.claude.com** and sign in (or create an account and add a payment method).
+2. Open **API keys** and click **Create key**. Name it "Pathtoon Studio".
+3. Copy the key (it's shown once) and add a line to `secrets/.env.local`:
+   `ANTHROPIC_API_KEY=` followed by the key.
+4. Restart the dev server, open `/studio/health`, and check **Claude** says OK.
+
+### Step 3. Get a KIE key (needed from Stage 4)
+
+1. Go to **kie.ai**, sign in, and open the API key page.
+2. Add `KIE_API_KEY=` followed by the key to `secrets/.env.local`, then restart.
+
+### Step 4. Run the studio's database update (once per stage that has one)
+
+Each stage that changes the database comes with a file in `supabase/migrations/`. Open
+Supabase > **SQL Editor** > **New query**, paste the whole file, and click **Run**.
+Stage 0's file is `0005_studio_foundation.sql`. Then open `/studio/health`: every Stage 0 row
+should say OK.
+
+### Step 5. Add the same keys to the live site
+
+In Vercel: **pathtoon-web** > **Settings** > **Environment Variables**. Add each server key
+(`ANTHROPIC_API_KEY`, `KIE_API_KEY`, `ADMIN_EMAIL`) for Production and Preview, as type
+**Sensitive**. Redeploy. Then check `https://pathtoon-web.vercel.app/studio/health`.
+
+### Costs and limits
+
+Every Claude and image call goes through one gateway that shows the estimated cost first,
+records it in the cost ledger (`/studio/settings`), warns at 80% of a limit and stops at 100%.
+Default limits: images $2.50 and 40 generations per episode, Claude $3 per episode, $10 a day in
+total. **Dry-run** is on at first: calls are logged with an estimate but nothing is charged.
+Change any of this in **Settings & costs**.
+
+### If a key leaks
+
+1. Create a new key at the provider (Anthropic: platform.claude.com > API keys; KIE: kie.ai;
+   Supabase: Project Settings > API) and delete the old one there.
+2. Put the new key in `secrets/.env.local` and in Vercel, then redeploy.
+3. Check `/studio/health` says OK.
+4. If it was ever committed to git, deleting the file isn't enough: the old key must be
+   deleted at the provider (step 1).
+
+### What "working" looks like (Stage 0)
+
+- `/studio` opens for you and shows **Projects**; signed out, it sends you to sign in; other
+  accounts get "not found".
+- `/studio/health` shows OK for Supabase, the studio tables, settings, the private bucket and
+  `ADMIN_EMAIL`. Claude shows Missing until you add the key (Stage 1).
+- In **Settings & costs**, **Test Claude call** with dry-run on adds a ledger row and charges
+  nothing.
+- A commit containing something that looks like a key is blocked.

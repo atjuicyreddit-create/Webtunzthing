@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
-import { saveSeries } from "@/app/admin/actions";
+import { saveSeries } from "@/app/(site)/admin/actions";
 import { slugify } from "@/lib/slug";
 import type { Series } from "@/lib/types";
 import { Field, fieldClass } from "./ui";

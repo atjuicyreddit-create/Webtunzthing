@@ -7,7 +7,7 @@ import {
   saveEpisode,
   saveEpisodeOnly,
   unpublishEpisode,
-} from "@/app/admin/actions";
+} from "@/app/(site)/admin/actions";
 import type { Episode } from "@/lib/types";
 import { Field, fieldClass } from "./ui";
 

@@ -1,0 +1,65 @@
+/* Pathtoon Studio brand (BRAND-NOTES.md v2). Scoped to /studio only; the public site
+   keeps its own colours until Tom decides on a rebrand. */
+.studio {
+  --s-ink: #0e1016;
+  --s-paper: #f3f0e8;
+  --s-magenta: #e3135a;
+  --s-magenta-deep: #c40e4c;
+  --s-volt: #c8ff3d;
+  --s-cobalt: #3b5bff;
+  --s-slate: #5c6170;
+  --s-charcoal: #1c1f2a;
+  --s-line: #dcd6c8;
+  --s-card: #ffffff;
+  background: var(--s-paper);
+  color: var(--s-ink);
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
+  color-scheme: light;
+}
+
+.studio .s-head {
+  font-family: var(--font-unbounded), var(--font-dm-sans), sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.studio .s-wordmark {
+  font-family: var(--font-sora), sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* Buttons: White on Signal Magenta passes AA (4.66:1). Never Ink on Magenta. */
+.studio .s-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  padding: 0.4rem 1.1rem;
+  border-radius: 0.75rem;
+  font-weight: 700;
+  transition: transform 0.08s ease, opacity 0.15s ease;
+}
+.studio .s-btn:active { transform: scale(0.98); }
+.studio .s-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.studio .s-btn-primary { background: var(--s-magenta); color: #fff; }
+.studio .s-btn-quiet { background: var(--s-card); color: var(--s-ink); border: 2px solid var(--s-line); }
+.studio .s-btn-info { background: var(--s-cobalt); color: #fff; }
+.studio a.s-link { color: var(--s-magenta-deep); text-decoration: underline; text-underline-offset: 2px; }
+
+.studio .s-card { background: var(--s-card); border: 1px solid var(--s-line); border-radius: 1rem; }
+.studio .s-input {
+  min-height: 2.75rem;
+  width: 100%;
+  border-radius: 0.6rem;
+  border: 2px solid var(--s-line);
+  background: #fff;
+  padding: 0.4rem 0.75rem;
+  font-size: 1rem;
+}
+.studio .s-input:focus { outline: 3px solid var(--s-cobalt); outline-offset: 1px; }
+.studio :focus-visible { outline: 3px solid var(--s-cobalt); outline-offset: 2px; }
+.studio .s-muted { color: var(--s-slate); }
+
+/* Active / selected state uses Volt with Ink text (AAA). */
+.studio .s-active { background: var(--s-volt); color: var(--s-ink); }

@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { Header } from "@/components/Header";
 import { RegisterServiceWorker } from "@/components/RegisterServiceWorker";
 import { SITE_NAME, TAGLINE, siteUrl } from "@/lib/env";
 
@@ -33,14 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-dvh font-sans antialiased">
-        <a
-          href="#main"
-          className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-full focus:bg-brand focus:px-4 focus:py-2 focus:text-brand-ink"
-        >
-          Skip to the comic
-        </a>
-        <Header />
-        <main id="main">{children}</main>
+        {children}
         <RegisterServiceWorker />
       </body>
     </html>
