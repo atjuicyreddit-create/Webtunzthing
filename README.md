@@ -199,6 +199,8 @@ spot for image generation in the Stage 4 story builder (out of scope for v1).
 
 1. Run `supabase/migrations/0002_admin_access.sql` once in the Supabase SQL Editor
    (adds free / paid-early episodes and the panel re-order function).
+   Then run `supabase/migrations/0003_admin_storage_read.sql` (lets admins delete
+   uploaded images, so removed panels don't leave files behind).
 2. Sign in as the admin account (see 2b). An **Admin** button appears in the header.
 3. **Admin > New series**, then **New episode**. Episodes start as drafts.
 4. On the episode page: **Add panel images** (pick them all at once; they are shrunk and

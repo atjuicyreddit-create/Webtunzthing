@@ -23,12 +23,17 @@ export async function requireAdmin(next = "/admin") {
   return { supabase, user };
 }
 
-export function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
+// Returns `base`, or `base-2`, `base-3`... — the first one no other series uses.
+export async function uniqueSlug(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  base: string,
+  excludeId?: string,
+): Promise<string> {
+  const { data } = await supabase.from("series").select("id,slug").like("slug", `${base}%`);
+  const taken = new Set((data ?? []).filter((s) => s.id !== excludeId).map((s) => s.slug));
+  if (!taken.has(base)) return base;
+  for (let n = 2; n < 1000; n++) {
+    if (!taken.has(`${base}-${n}`)) return `${base}-${n}`;
+  }
+  return `${base}-${Date.now()}`;
 }

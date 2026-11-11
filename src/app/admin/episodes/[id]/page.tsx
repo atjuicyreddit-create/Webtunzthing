@@ -41,7 +41,7 @@ export default async function EditEpisode({
   return (
     <>
       <p className="text-sm font-bold text-muted">
-        <Link href={`/admin/series/${series.id}`} className="underline">
+        <Link href={`/admin/series/${series.id}`} className="inline-flex min-h-11 items-center underline">
           ← {series.title}
         </Link>
       </p>

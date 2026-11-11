@@ -30,7 +30,7 @@ export default async function NewEpisode({
   return (
     <>
       <p className="text-sm font-bold text-muted">
-        <Link href={`/admin/series/${id}`} className="underline">
+        <Link href={`/admin/series/${id}`} className="inline-flex min-h-11 items-center underline">
           ← {series.title}
         </Link>
       </p>

@@ -220,7 +220,7 @@ export function PanelManager({ episodeId, initialPanels, previewHref }: Props) {
                 onClick={() => move(i, -1)}
                 disabled={i === 0}
                 aria-label={`Move panel ${i + 1} up`}
-                className="btn btn-quiet !min-h-12 disabled:opacity-40"
+                className="btn btn-quiet !min-h-12 whitespace-nowrap !px-2 text-sm disabled:opacity-40"
               >
                 ↑ Up
               </button>
@@ -229,7 +229,7 @@ export function PanelManager({ episodeId, initialPanels, previewHref }: Props) {
                 onClick={() => move(i, 1)}
                 disabled={i === panels.length - 1}
                 aria-label={`Move panel ${i + 1} down`}
-                className="btn btn-quiet !min-h-12 disabled:opacity-40"
+                className="btn btn-quiet !min-h-12 whitespace-nowrap !px-2 text-sm disabled:opacity-40"
               >
                 ↓ Down
               </button>
@@ -237,7 +237,7 @@ export function PanelManager({ episodeId, initialPanels, previewHref }: Props) {
                 type="button"
                 onClick={() => remove(p)}
                 aria-label={`Delete panel ${i + 1}`}
-                className="btn btn-quiet !min-h-12"
+                className="btn btn-quiet !min-h-12 whitespace-nowrap !px-2 text-sm"
               >
                 Delete
               </button>

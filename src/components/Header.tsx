@@ -11,26 +11,26 @@ export async function Header() {
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-bg/90 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-2xl items-center justify-between gap-2 px-4">
-        <Link href="/" className="text-xl font-extrabold tracking-tight">
+        <Link href="/" className="inline-flex min-h-11 items-center text-xl font-extrabold tracking-tight">
           {SITE_NAME}
           <span className="text-brand">.</span>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <ThemeToggle />
           {isAdmin && (
-            <Link href="/admin" className="btn btn-quiet !min-h-11 !px-4 text-sm">
+            <Link href="/admin" className="btn btn-quiet !min-h-11 whitespace-nowrap !px-3 text-sm sm:!px-4">
               Admin
             </Link>
           )}
           {user ? (
             <form action="/auth/signout" method="post">
-              <button type="submit" className="btn btn-quiet !min-h-11 !px-4 text-sm">
+              <button type="submit" className="btn btn-quiet !min-h-11 whitespace-nowrap !px-3 text-sm sm:!px-4">
                 Sign out
               </button>
             </form>
           ) : (
-            <Link href="/login" className="btn btn-primary !min-h-11 !px-4 text-sm">
+            <Link href="/login" className="btn btn-primary !min-h-11 whitespace-nowrap !px-3 text-sm sm:!px-4">
               Sign in
             </Link>
           )}

@@ -34,8 +34,8 @@ export default async function EditSeries({
   return (
     <>
       <h1 className="text-3xl font-extrabold">{series.title}</h1>
-      <p className="mb-4 text-sm text-muted">
-        <Link href={`/series/${series.slug}`} className="underline">
+      <p className="mb-2 text-sm text-muted">
+        <Link href={`/series/${series.slug}`} className="inline-flex min-h-11 items-center underline">
           View on the site
         </Link>
       </p>

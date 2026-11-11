@@ -13,10 +13,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="mx-auto max-w-2xl px-4 pb-28 pt-4">
       <nav aria-label="Admin" className="mb-4 flex items-center gap-2 text-sm font-bold">
-        <Link href="/admin" className="rounded-full bg-brand-soft px-3 py-2">
+        <Link href="/admin" className="inline-flex min-h-11 items-center rounded-full bg-brand-soft px-4">
           Admin
         </Link>
-        <Link href="/setup" className="px-3 py-2 text-muted underline">
+        <Link href="/setup" className="inline-flex min-h-11 items-center px-3 text-muted underline">
           Setup check
         </Link>
       </nav>

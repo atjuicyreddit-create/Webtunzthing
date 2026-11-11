@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { saveEpisode } from "@/app/admin/actions";
+import {
+  publishEpisode,
+  saveEpisode,
+  saveEpisodeOnly,
+  unpublishEpisode,
+} from "@/app/admin/actions";
 import type { Episode } from "@/lib/types";
 import { Field, fieldClass } from "./ui";
 
@@ -102,24 +107,23 @@ export function EpisodeForm({ seriesId, nextNumber, episode, panelCount = 0 }: P
 
       {/* Sticky so the buttons are always under your thumb on a phone. */}
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-bg/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
-        <div className="mx-auto flex max-w-2xl flex-col gap-2 sm:flex-row">
-          <button type="submit" name="intent" value="save" className="btn btn-quiet flex-1">
-            Save
+        <div className="mx-auto flex max-w-2xl gap-2">
+          <button type="submit" formAction={saveEpisodeOnly} className="btn btn-quiet flex-1 whitespace-nowrap !px-3">
+            {episode ? "Save" : "Create episode"}
           </button>
           {published ? (
-            <button type="submit" name="intent" value="draft" className="btn btn-quiet flex-1">
-              Unpublish (make draft)
+            <button type="submit" formAction={unpublishEpisode} className="btn btn-quiet flex-1 whitespace-nowrap !px-3">
+              Unpublish
             </button>
           ) : (
             episode && (
               <button
                 type="submit"
-                name="intent"
-                value="publish"
+                formAction={publishEpisode}
                 disabled={panelCount === 0}
-                className="btn btn-primary flex-1 disabled:opacity-50"
+                className="btn btn-primary flex-1 whitespace-nowrap !px-3 disabled:opacity-50"
               >
-                {panelCount === 0 ? "Add panels to publish" : "Publish now"}
+                {panelCount === 0 ? "Add panels first" : "Publish now"}
               </button>
             )
           )}

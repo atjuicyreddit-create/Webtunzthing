@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireAdmin, slugify } from "@/lib/admin";
+import { requireAdmin, uniqueSlug } from "@/lib/admin";
+import { slugify } from "@/lib/slug";
 
 // Every action re-checks that the caller is an admin, then writes with the
 // caller's own session, so the database's admin-only rules apply as well.
@@ -21,30 +22,35 @@ export async function saveSeries(form: FormData) {
   const { supabase } = await requireAdmin();
   const id = text(form, "id");
   const title = text(form, "title");
-  const slug = slugify(text(form, "slug") || title);
   const here = id ? `/admin/series/${id}` : "/admin/series/new";
 
   if (!title) back(here, "Please give the series a title.");
-  if (!slug) back(here, "Please give the series a web address (slug).");
+  const base = slugify(text(form, "slug") || title) || "series";
 
-  const row = {
+  const fields = {
     title,
-    slug,
     tagline: optional(form, "tagline"),
     description: optional(form, "description"),
     cover_url: optional(form, "cover_url"),
   };
 
-  const query = id
-    ? supabase.from("series").update(row).eq("id", id).select("id").single()
-    : supabase.from("series").insert(row).select("id").single();
-  const { data, error } = await query;
-  if (error || !data) {
-    back(
-      here,
-      error?.code === "23505" ? "That web address is already used." : "Couldn't save the series.",
-    );
+  // If the address is taken, quietly use -2, -3... instead of blocking you.
+  // (Retry covers the rare case of two saves at the same moment.)
+  let data: { id: string } | null = null;
+  let failed = false;
+  for (let attempt = 0; attempt < 3 && !data; attempt++) {
+    const slug = await uniqueSlug(supabase, base, id || undefined);
+    const row = { ...fields, slug };
+    const { data: saved, error } = await (id
+      ? supabase.from("series").update(row).eq("id", id).select("id").single()
+      : supabase.from("series").insert(row).select("id").single());
+    if (saved) data = saved;
+    else if (error?.code !== "23505") {
+      failed = true;
+      break;
+    }
   }
+  if (!data || failed) back(here, "Couldn't save the series. Please try again.");
 
   revalidatePath("/", "layout");
   redirect(`/admin/series/${data.id}?saved=1`);
@@ -56,10 +62,36 @@ export async function deleteSeries(form: FormData) {
   if (text(form, "confirm") !== "delete") {
     back(`/admin/series/${id}`, "Type delete to confirm.");
   }
+  const { data: eps } = await supabase.from("episodes").select("id,panels(image_url)").eq("series_id", id);
+  const panels = (eps ?? []).flatMap((e) => (e.panels ?? []) as { image_url: string }[]);
   const { error } = await supabase.from("series").delete().eq("id", id);
   if (error) back(`/admin/series/${id}`, "Couldn't delete the series.");
+  await removePanelFiles(supabase, panels);
+  for (const e of eps ?? []) await removeEpisodeFolder(supabase, e.id);
   revalidatePath("/", "layout");
   redirect("/admin");
+}
+
+// Removes uploaded image files for panels that are being deleted, so storage
+// doesn't fill up with orphans. Best effort: needs the admin storage read rule
+// from migration 0003, and never blocks the delete itself.
+async function removePanelFiles(
+  supabase: Awaited<ReturnType<typeof requireAdmin>>["supabase"],
+  panels: { image_url: string }[],
+) {
+  const paths = panels.map((p) => p.image_url.split("/panels/")[1]).filter(Boolean);
+  if (paths.length) await supabase.storage.from("panels").remove(paths);
+}
+
+// Removes everything in an episode's upload folder, including any leftovers
+// from earlier panel deletes.
+async function removeEpisodeFolder(
+  supabase: Awaited<ReturnType<typeof requireAdmin>>["supabase"],
+  episodeId: string,
+) {
+  const { data } = await supabase.storage.from("panels").list(episodeId, { limit: 1000 });
+  const paths = (data ?? []).map((f) => `${episodeId}/${f.name}`);
+  if (paths.length) await supabase.storage.from("panels").remove(paths);
 }
 
 function parseEpisode(form: FormData) {
@@ -135,13 +167,31 @@ export async function saveEpisode(form: FormData) {
   redirect(`/admin/episodes/${data.id}?created=1`);
 }
 
+// One action per button, so each button's meaning doesn't depend on the browser
+// sending the clicked button's name along with the form.
+export async function saveEpisodeOnly(form: FormData) {
+  form.set("intent", "save");
+  return saveEpisode(form);
+}
+export async function publishEpisode(form: FormData) {
+  form.set("intent", "publish");
+  return saveEpisode(form);
+}
+export async function unpublishEpisode(form: FormData) {
+  form.set("intent", "draft");
+  return saveEpisode(form);
+}
+
 export async function deleteEpisode(form: FormData) {
   const { supabase } = await requireAdmin();
   const id = text(form, "id");
   const seriesId = text(form, "series_id");
   if (text(form, "confirm") !== "delete") back(`/admin/episodes/${id}`, "Type delete to confirm.");
+  const { data: panels } = await supabase.from("panels").select("image_url").eq("episode_id", id);
   const { error } = await supabase.from("episodes").delete().eq("id", id);
   if (error) back(`/admin/episodes/${id}`, "Couldn't delete the episode.");
+  await removePanelFiles(supabase, panels ?? []);
+  await removeEpisodeFolder(supabase, id);
   revalidatePath("/", "layout");
   redirect(`/admin/series/${seriesId}`);
 }
