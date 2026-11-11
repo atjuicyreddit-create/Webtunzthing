@@ -1,7 +1,7 @@
 # Pathtoon Studio: resources
 
 Everything the studio needs, in one place. Kept up to date at every stage.
-Last updated: 11 November 2026 (Stage 0).
+Last updated: 11 November 2026 (Stage 1).
 
 ## Services and keys
 
@@ -69,5 +69,16 @@ Studio (migration `0005_studio_foundation.sql`, admin-only):
 | `studio_versions` | Snapshots of everything for compare and restore |
 | `studio_ai_calls` | The cost ledger: every Claude and image call, estimate and actual |
 | `studio_lessons` | Lessons learned, proposed and approved |
+
+Stage 1 (migration `0006_studio_story.sql`, admin-only; also adds idea, tone, audience, length,
+loglines, one-line test, season summary and destination to `studio_projects`):
+
+| Table | Holds |
+|---|---|
+| `studio_story_answers` | One row per question card: the answer, where it came from, and the last suggestions |
+| `studio_why_items` | The Why? pass: each item without a reason, and Tom's one line |
+| `studio_characters` | Character sheets (look, colours, costume locks, guardrails…) |
+| `studio_milestones` | A serial's growth milestones, in order |
+| `studio_suggestions` | Claude's plot suggestions, accepted or rejected |
 
 Functions: `studio_reserve_ai_call` (checks limits and reserves cost, under a lock), `studio_finish_ai_call`.

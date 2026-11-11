@@ -46,6 +46,8 @@ export type ClaudeCall = Common & {
   messages: Anthropic.Beta.BetaMessageParam[];
   maxTokens?: number;
   effort?: Effort;
+  /** JSON schema for a structured reply (Claude returns JSON text matching it). */
+  schema?: Record<string, unknown>;
   /** What a dry run returns instead of calling Claude. */
   dryRunText?: string;
 };
@@ -193,7 +195,14 @@ export async function aiClaude(call: ClaudeCall): Promise<AiResult> {
         ? { system: [{ type: "text" as const, text: call.system, cache_control: { type: "ephemeral" as const } }] }
         : {}),
       messages: call.messages,
-      ...(call.effort ? { output_config: { effort: call.effort } } : {}),
+      ...(call.effort || call.schema
+        ? {
+            output_config: {
+              ...(call.effort ? { effort: call.effort } : {}),
+              ...(call.schema ? { format: { type: "json_schema" as const, schema: call.schema } } : {}),
+            },
+          }
+        : {}),
       ...(useFallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
     });
     const msg = await stream.finalMessage();
