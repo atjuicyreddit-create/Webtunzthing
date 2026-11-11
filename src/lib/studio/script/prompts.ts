@@ -6,6 +6,7 @@ import type { StudioSettings } from "../settings";
 import { SYSTEM, storyContext } from "../story/prompts";
 import type { Story } from "../story/story";
 import type { Episode } from "../structure/types";
+import { readerRouteText } from "../vote/route";
 import { CHECKS, type Fork, type Prop, type ScriptPanel } from "./types";
 
 export type ScriptAction = { kind: "draft" } | { kind: "check" };
@@ -82,11 +83,12 @@ function build(
     .flatMap((x) => x.scenes.map((sc) => `- [${x.title}] ${sc.title}: ${sc.beat ?? ""} (purpose: ${sc.purpose ?? "?"}; props introduced: ${sc.props_introduced.join(", ") || "-"}; used: ${sc.props_used.join(", ") || "-"}${sc.chain ? `; step ${sc.chain_step} of ${sc.chain}` : ""}${sc.reader_choice ? `; vote: ${sc.reader_choice}` : ""})`))
     .join("\n");
   const milestone = s.milestones.find((m) => m.id === episode.milestone_id);
+  const route = readerRouteText(episode.reader_route);
 
   if (a.kind === "draft") {
     return {
       purpose: `Script: draft episode ${episode.number}`,
-      user: `${ctx}\n\nCharacter locks and voice guardrails:\n${characterLocks(s)}\n\nEpisode ${episode.number}: ${episode.title}${episode.summary ? ` — ${episode.summary}` : ""}${milestone ? `\nMilestone this episode reaches: ${milestone.title}` : ""}\nScenes, in order:\n${scenes || "(no scenes yet: invent a tight structure from the story)"}\n
+      user: `${ctx}\n\nCharacter locks and voice guardrails:\n${characterLocks(s)}\n\nEpisode ${episode.number}: ${episode.title}${episode.summary ? ` — ${episode.summary}` : ""}${milestone ? `\nMilestone this episode reaches: ${milestone.title}` : ""}${route ? `\n\n${route}\n` : ""}\nScenes, in order:\n${scenes || "(no scenes yet: invent a tight structure from the story)"}\n
 Write the script panel by panel, in the Morning Brew format. For each panel: title; shot (e.g. "exterior, establishing" or "close-up"); camera; characters in it;
 action (the visual, specific enough to draw); caption (7 words or fewer, only what the picture can't show, "" if none); dialogue (within each character's voice guardrails);
 size (small, mid or tall); gap_after in px at 800 wide (150-300 same scene, 500-800 scene jump, 1000+ before the punchline); props in the panel with location and state;
@@ -133,7 +135,7 @@ Also give a prop table (name, owner, rule) for every story prop${serial ? `, and
 
   return {
     purpose: `Script: check episode ${episode.number}`,
-    user: `${ctx}\n\nCharacter locks and voice guardrails:\n${characterLocks(s)}\n\nSCRIPT, episode ${episode.number} (${serial ? "serial" : "one-off"}):\n${scriptText(current.panels, current.fork, current.props, serial)}\n
+    user: `${ctx}\n\nCharacter locks and voice guardrails:\n${characterLocks(s)}\n\nSCRIPT, episode ${episode.number} (${serial ? "serial" : "one-off"}):\n${scriptText(current.panels, current.fork, current.props, serial)}\n${route ? `\n${route}\n(Also check the script follows this reader choice; report it under the closest check key.)\n` : ""}
 Run the script check. For EACH of these keys give pass, fail or na (na only when it truly doesn't apply, e.g. "vote" for a one-off), the panel numbers involved,
 and a one-line note saying exactly what's wrong and where, or why it passes. Do NOT rewrite the script and do not suggest that you'll fix it; Tom decides.
 ${CHECKS.map((c) => `- ${c.key}: ${c.label}`).join("\n")}

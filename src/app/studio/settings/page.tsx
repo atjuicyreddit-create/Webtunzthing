@@ -86,6 +86,8 @@ export default async function SettingsPage({
                   ["session_cap_usd", "Everything per day ($)", settings.session_cap_usd, "0.01"],
                   ["warn_at_percent", "Warn at (% of a limit)", Math.round(settings.warn_at * 100), "1"],
                   ["max_takes_per_panel", "Takes per panel (max)", settings.max_takes_per_panel, "1"],
+                  ["vote_min_comments", "Reader vote: too few comments below", settings.vote_min_comments, "1"],
+                  ["vote_max_comments", "Reader vote: comments screened (max)", settings.vote_max_comments, "1"],
                 ] as const
               ).map(([name, label, value, step]) => (
                 <div key={name}>

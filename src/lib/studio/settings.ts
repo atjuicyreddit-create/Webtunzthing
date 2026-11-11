@@ -16,6 +16,10 @@ export type StudioSettings = {
   kie_usd_per_credit: number;
   /** At most this many final takes per panel (Stage 5, default 3). */
   max_takes_per_panel: number;
+  /** Reader vote (Stage 8): fewer valid comments than this offers the backup pick (default 3). */
+  vote_min_comments: number;
+  /** Reader vote: at most this many comments go to Claude per screening (default 30). */
+  vote_max_comments: number;
   updated_at: string;
 };
 
@@ -30,6 +34,8 @@ export async function getStudioSettings(supabase: SupabaseClient): Promise<Studi
     warn_at: Number(data.warn_at),
     kie_usd_per_credit: data.kie_usd_per_credit === undefined ? 0.005 : Number(data.kie_usd_per_credit),
     max_takes_per_panel: data.max_takes_per_panel === undefined ? 3 : Number(data.max_takes_per_panel),
+    vote_min_comments: data.vote_min_comments === undefined ? 3 : Number(data.vote_min_comments),
+    vote_max_comments: data.vote_max_comments === undefined ? 30 : Number(data.vote_max_comments),
   } as StudioSettings;
 }
 

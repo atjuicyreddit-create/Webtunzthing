@@ -6,11 +6,15 @@ const SCENE_COLS =
   "id,episode_id,act_id,position,title,purpose,beat,characters,location,props_introduced,props_used,plants,payoffs,chain,chain_step,reader_choice";
 
 export async function loadStructure(supabase: SupabaseClient, projectId: string): Promise<Episode[]> {
-  const [eps, acts, scenes] = await Promise.all([
-    supabase.from("studio_episodes").select("id,number,title,summary,milestone_id").eq("project_id", projectId).order("number"),
+  const [epsWithRoute, acts, scenes] = await Promise.all([
+    supabase.from("studio_episodes").select("id,number,title,summary,milestone_id,reader_route").eq("project_id", projectId).order("number"),
     supabase.from("studio_acts").select("id,episode_id,position,title").eq("project_id", projectId).order("position"),
     supabase.from("studio_scenes").select(SCENE_COLS).eq("project_id", projectId).order("position"),
   ]);
+  // Before the Stage 8 database update, reader_route doesn't exist yet: load without it.
+  const eps = epsWithRoute.error
+    ? await supabase.from("studio_episodes").select("id,number,title,summary,milestone_id").eq("project_id", projectId).order("number")
+    : epsWithRoute;
   const byAct = new Map<string, Scene[]>();
   for (const s of (scenes.data ?? []) as Scene[]) {
     const list = byAct.get(s.act_id) ?? [];

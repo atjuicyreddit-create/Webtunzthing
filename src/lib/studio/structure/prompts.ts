@@ -6,6 +6,7 @@ import { SYSTEM, storyContext } from "../story/prompts";
 import type { Story } from "../story/story";
 import type { Episode } from "./types";
 import { readingOrder } from "./warnings";
+import { readerRouteText } from "../vote/route";
 
 export type StructureAction = { kind: "draft" } | { kind: "reorder" };
 
@@ -80,11 +81,15 @@ function build(s: Story, episodes: Episode[], a: StructureAction) {
   const ctx = storyContext(s, { includeCharacters: true });
   const milestones = s.milestones.map((m, i) => `${i + 1}. ${m.title}${m.description ? ` — ${m.description}` : ""}`).join("\n");
   const plan = s.project.episodes_planned ?? (s.project.format === "serial" ? 3 : 1);
+  const routes = episodes
+    .filter((e) => e.reader_route?.route)
+    .map((e) => `Episode ${e.number}: ${readerRouteText(e.reader_route)}`)
+    .join("\n\n");
 
   if (a.kind === "draft") {
     return {
       purpose: "Structure: draft from the story",
-      user: `${ctx}\n${milestones ? `\nMilestones:\n${milestones}\n` : ""}${s.project.destination ? `Destination: ${s.project.destination}\n` : ""}
+      user: `${ctx}\n${milestones ? `\nMilestones:\n${milestones}\n` : ""}${s.project.destination ? `Destination: ${s.project.destination}\n` : ""}${routes ? `\nReader votes already decided (follow these):\n${routes}\n` : ""}
 Draft the structure: ${plan} episode(s), each with 2 or 3 acts, each act with 2 to 4 scenes.
 For every scene give: title, purpose (which spine point or milestone it serves, e.g. "Want", "Flaw", "Milestone 1"), beat (one line),
 characters, location, props_introduced (props first shown here), props_used (props used here), plants (set-ups planted here),

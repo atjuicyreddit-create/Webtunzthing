@@ -121,6 +121,13 @@ export default async function ScriptPage({
       <div className="mt-4">
         <Notice error={sp.error} ok={sp.ok} />
         {s.gate?.state !== "approved" && <Notice warn="The story isn't approved (or changed since). You can write here, but Script final needs an approved story." />}
+        {episode.reader_route?.route && (
+          <p className="s-card mb-4 p-3 text-sm">
+            <strong>Readers chose</strong> (vote after episode {episode.reader_route.from_episode}): {episode.reader_route.route}{" "}
+            <span className="font-bold">“{episode.reader_route.you_chose}”</span>
+            {episode.reader_route.credit ? ` · credit ${episode.reader_route.credit}` : ""}. Claude&rsquo;s draft and check follow this route.
+          </p>
+        )}
       </div>
 
       <VersionBar ids={ids} versions={versions} compareId={compareTo?.id} />

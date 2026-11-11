@@ -202,6 +202,8 @@ export async function saveSettings(form: FormData) {
     session_cap_usd: num(form, "session_cap_usd", 0, 10000),
     warn_at: num(form, "warn_at_percent", 1, 100),
     max_takes_per_panel: num(form, "max_takes_per_panel", 1, 20),
+    vote_min_comments: num(form, "vote_min_comments", 0, 100),
+    vote_max_comments: num(form, "vote_max_comments", 1, 100),
   };
   if (Object.values(caps).some((v) => v === null)) back(here, { error: "Check the limits: each must be a number in range." });
 
@@ -216,6 +218,8 @@ export async function saveSettings(form: FormData) {
       session_cap_usd: caps.session_cap_usd,
       warn_at: caps.warn_at! / 100,
       max_takes_per_panel: Math.round(caps.max_takes_per_panel!),
+      vote_min_comments: Math.round(caps.vote_min_comments!),
+      vote_max_comments: Math.round(caps.vote_max_comments!),
       dry_run: form.get("dry_run") === "on",
       updated_at: new Date().toISOString(),
     })

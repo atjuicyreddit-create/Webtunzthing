@@ -128,3 +128,14 @@ New columns on `studio_takes`: lessons applied, references sent, the take it fix
 New database rules: a panel's chosen image is never exploration art, and must be a finished, checklist-ticked, not-rejected image of that same panel; a lesson can only be switched on once approved.
 
 The masters import (`studio-reference/studio-assets/morning-brew-test-pack/`) and the edit-log import (`studio-reference/EDIT-LOG.md`) only work locally.
+
+Stage 8 (migration `0011_studio_vote.sql`, admin-only; plan in `docs/studio/WINNING-COMMENT-PLAN.md`):
+
+| Table | Holds |
+|---|---|
+| `studio_vote_rounds` | One row per screening of an episode's vote: the vote card at the time, Claude's summary, and Tom's decision (who, when, note) |
+| `studio_vote_comments` | A frozen copy of each comment as judged, with Claude's verdict, reason, rules involved, adjusted version, branch, and Tom's edits |
+
+New columns on `studio_episodes`: `comment_source_episode_id` (a read-only pointer to the live episode whose comments are read; not a publish link) and `reader_route` (the decided route into that episode). New settings: `vote_min_comments` (default 3), `vote_max_comments` (default 30).
+
+New database rules: a decision names a comment from the same screening; an unsafe comment can never win; choosing a vetoed comment needs a written reason; a decided vote can't be edited until reopened. The public `comments`, `episodes`, `series` and `panels` tables are only read.

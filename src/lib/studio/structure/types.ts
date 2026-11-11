@@ -27,6 +27,8 @@ export type Episode = {
   title: string;
   summary: string | null;
   milestone_id: string | null;
+  /** The reader vote that leads into this episode (Stage 8), if decided. */
+  reader_route?: { route: string; you_chose: string; credit: string | null; branch: string; rejoins: string; round_id: string; from_episode: number; decided_at: string } | null;
   acts: Act[];
 };
 

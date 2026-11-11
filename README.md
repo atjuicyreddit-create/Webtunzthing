@@ -257,7 +257,16 @@ git config core.hooksPath .githooks
 Each stage that changes the database comes with a file in `supabase/migrations/`. Open
 Supabase > **SQL Editor** > **New query**, paste the whole file, and click **Run**.
 Stage 0's file is `0005_studio_foundation.sql`. Then open `/studio/health`: every Stage 0 row
-should say OK. The files so far run in order, `0005` to `0010` (Stage 5: panels and lessons).
+should say OK. The files so far run in order, `0005` to `0011` (Stage 5: panels and lessons;
+Stage 8: reader vote).
+
+### Reader vote (Stage 8)
+
+For serials: **Reader vote** in a project's menu links a studio episode to a live episode
+(read-only), lists its comments, and lets Claude screen them against the story's rules: pass,
+nearly passes (with the one detail fixed) or veto. You choose the winner, or the backup pick, and
+the route goes into the next episode's structure and script drafts. A screening of a few comments
+costs about 11¢ with the story model. It only runs when you press the button; nothing is scheduled.
 
 ### Panels and lettering (Stage 5)
 

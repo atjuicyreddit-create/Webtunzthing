@@ -3,9 +3,10 @@ import Link from "next/link";
 // The studio's left-hand stepper. Stages unlock as they're built (docs/studio/OPUS-BUILD.md).
 export const BUILT_STAGE = 5;
 
-type StepKey = "idea" | "story" | "structure" | "script" | "assets" | "panels" | "preview" | "history" | "publish";
+type StepKey = "idea" | "story" | "structure" | "script" | "assets" | "panels" | "preview" | "history" | "publish" | "vote";
 
-const STEPS: { key: StepKey; label: string; stage: number; gate?: string; href?: (id: string) => string }[] = [
+// `built` marks a step that was built out of order (Stage 8 came before Stages 6 and 7).
+const STEPS: { key: StepKey; label: string; stage: number; gate?: string; built?: boolean; note?: string; href?: (id: string) => string }[] = [
   { key: "idea", label: "Idea", stage: 1, href: (id) => `/studio/projects/${id}/idea` },
   { key: "story", label: "Story builder", stage: 1, gate: "Story approved", href: (id) => `/studio/projects/${id}/story` },
   { key: "structure", label: "Structure board", stage: 2, href: (id) => `/studio/projects/${id}/structure` },
@@ -15,6 +16,7 @@ const STEPS: { key: StepKey; label: string; stage: number; gate?: string; href?:
   { key: "preview", label: "Preview & stitch", stage: 6 },
   { key: "history", label: "History & costs", stage: 6 },
   { key: "publish", label: "Publish", stage: 7, gate: "Publish" },
+  { key: "vote", label: "Reader vote", stage: 8, built: true, note: "Serials: the winning comment", href: (id) => `/studio/projects/${id}/vote` },
 ];
 
 export function Stepper({
@@ -33,7 +35,7 @@ export function Stepper({
       </Link>
       <ol className="space-y-1">
         {STEPS.map((s, i) => {
-          const ready = s.stage <= BUILT_STAGE && s.href;
+          const ready = (s.stage <= BUILT_STAGE || s.built) && s.href;
           const active = current === s.key;
           const gateState = s.key === "story" ? storyGate : null;
           const inner = (
@@ -52,6 +54,7 @@ export function Stepper({
                   {gateState === "approved" && "Approved"}
                   {gateState === "stale" && <span className="font-bold text-[var(--s-magenta-deep)]">Changed since approval</span>}
                   {ready && !gateState && s.gate ? `Gate: ${s.gate}` : ""}
+                  {ready && !s.gate && s.note ? s.note : ""}
                   {!ready && s.gate ? ` · gate: ${s.gate}` : ""}
                 </span>
               </span>
