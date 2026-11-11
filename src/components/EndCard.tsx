@@ -35,12 +35,12 @@ export function EndCard(props: Props) {
             </p>
             <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-center">
               {signedIn ? (
-                <p className="rounded-2xl bg-brand-soft px-4 py-3 font-semibold">
-                  You&rsquo;re signed in. Suggestions open very soon — watch this space.
-                </p>
+                <a href="#comments" className="btn btn-primary">
+                  Write a comment ↓
+                </a>
               ) : (
                 <Link
-                  href={`/login?next=${encodeURIComponent(here)}`}
+                  href={`/login?next=${encodeURIComponent(`${here}#comments`)}`}
                   className="btn btn-primary"
                 >
                   Sign in to join in

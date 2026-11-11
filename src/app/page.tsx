@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { DemoBanner } from "@/components/DemoBanner";
-import { getAllSeries } from "@/lib/data";
+import { getAllSeries, getSeriesThumbnails } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const allSeries = await getAllSeries();
+  const [allSeries, thumbs] = await Promise.all([getAllSeries(), getSeriesThumbnails()]);
 
   return (
     <>
@@ -40,8 +40,19 @@ export default async function Home() {
                 <li key={s.id}>
                   <Link
                     href={`/series/${s.slug}`}
-                    className="block rounded-3xl border-2 border-line bg-surface p-6 transition hover:border-brand"
+                    className="block overflow-hidden rounded-3xl border-2 border-line bg-surface transition hover:border-brand"
                   >
+                    {(s.cover_url || thumbs[s.id]) && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={s.cover_url || thumbs[s.id]}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        className="aspect-[16/9] w-full bg-line object-cover object-top"
+                      />
+                    )}
+                    <div className="p-6">
                     <p className="text-sm font-bold uppercase tracking-wide text-brand">
                       Free to read
                     </p>
@@ -49,6 +60,7 @@ export default async function Home() {
                     {s.tagline && <p className="mt-1 font-semibold">{s.tagline}</p>}
                     {s.description && <p className="mt-2 text-muted">{s.description}</p>}
                     <span className="btn btn-primary mt-4 w-full sm:w-auto">Start reading</span>
+                    </div>
                   </Link>
                 </li>
               ))}

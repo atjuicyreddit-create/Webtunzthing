@@ -5,7 +5,8 @@ import { EndCard } from "@/components/EndCard";
 import { LockCard } from "@/components/LockCard";
 import { Reader } from "@/components/Reader";
 import { isEarlyLocked } from "@/lib/access";
-import { getCurrentUser, getEpisodePage, getProfile } from "@/lib/data";
+import { Comments } from "@/components/Comments";
+import { getComments, getCurrentUser, getEpisodePage, getProfile } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function EpisodePage({ params }: Props) {
+export default async function EpisodePage({
+  params,
+  searchParams,
+}: Props & { searchParams: Promise<{ comment_error?: string; commented?: string; comment_deleted?: string }> }) {
   const { slug, number } = await params;
   const n = parseNumber(number);
   if (!n) notFound();
@@ -52,6 +56,10 @@ export default async function EpisodePage({ params }: Props) {
   const { series, episode, previous, next, isLatest } = page;
   const locked = isEarlyLocked(episode, profile);
   const here = `/series/${series.slug}/episodes/${episode.number}`;
+  const [comments, query] = await Promise.all([
+    locked ? Promise.resolve([]) : getComments(episode.id),
+    searchParams,
+  ]);
 
   return (
     <>
@@ -90,6 +98,18 @@ export default async function EpisodePage({ params }: Props) {
             signedIn={Boolean(user)}
             next={next}
             previous={previous}
+          />
+
+          <Comments
+            episodeId={episode.id}
+            path={here}
+            comments={comments}
+            userId={user?.id ?? null}
+            isAdmin={profile?.role === "admin"}
+            canPost={episode.status === "published"}
+            error={query.comment_error}
+            posted={query.commented === "1"}
+            deleted={query.comment_deleted === "1"}
           />
         </>
       )}

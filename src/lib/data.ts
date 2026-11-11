@@ -106,6 +106,49 @@ export async function getCurrentUser() {
   return user;
 }
 
+export type Comment = {
+  id: string;
+  user_id: string;
+  author_name: string;
+  body: string;
+  created_at: string;
+};
+
+export async function getComments(episodeId: string): Promise<Comment[]> {
+  if (isDemoMode()) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("comments")
+    .select("id,user_id,author_name,body,created_at")
+    .eq("episode_id", episodeId)
+    .order("created_at", { ascending: true })
+    .limit(500);
+  return (data as Comment[]) ?? [];
+}
+
+// One picture per series for the home page: its cover if set, otherwise the
+// first panel of its first readable episode. Locked panels are hidden by the
+// database, so a paid-early episode never leaks its art here.
+export async function getSeriesThumbnails(): Promise<Record<string, string>> {
+  if (isDemoMode()) return {};
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("episodes")
+    .select("series_id,number,panels(image_url,position)")
+    .order("number", { ascending: true })
+    .order("position", { referencedTable: "panels", ascending: true })
+    .limit(1, { referencedTable: "panels" });
+  const out: Record<string, string> = {};
+  for (const e of (data ?? []) as {
+    series_id: string;
+    panels: { image_url: string }[] | null;
+  }[]) {
+    const first = e.panels?.[0]?.image_url;
+    if (first && !out[e.series_id]) out[e.series_id] = first;
+  }
+  return out;
+}
+
 // The signed-in person's role and plan (null when signed out or in demo mode).
 export async function getProfile(): Promise<Profile | null> {
   if (isDemoMode()) return null;

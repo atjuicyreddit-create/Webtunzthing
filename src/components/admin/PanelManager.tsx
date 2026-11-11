@@ -58,6 +58,8 @@ export function PanelManager({ episodeId, initialPanels, previewHref }: Props) {
   );
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [customFor, setCustomFor] = useState<string | null>(null);
+  const [customValue, setCustomValue] = useState("");
 
   async function addFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -199,8 +201,16 @@ export function PanelManager({ episodeId, initialPanels, previewHref }: Props) {
                 </label>
                 <select
                   id={`gap-${p.id}`}
-                  value={p.gap_after}
-                  onChange={(e) => setGap(p, Number(e.target.value))}
+                  value={customFor === p.id ? "custom" : p.gap_after}
+                  onChange={(e) => {
+                    if (e.target.value === "custom") {
+                      setCustomFor(p.id);
+                      setCustomValue(String(p.gap_after));
+                    } else {
+                      setCustomFor(null);
+                      setGap(p, Number(e.target.value));
+                    }
+                  }}
                   className="min-h-11 w-full rounded-xl border-2 border-line bg-bg px-2 text-base"
                 >
                   {!GAPS.some((g) => g.value === p.gap_after) && (
@@ -211,7 +221,40 @@ export function PanelManager({ episodeId, initialPanels, previewHref }: Props) {
                       {g.label}
                     </option>
                   ))}
+                  <option value="custom">Custom…</option>
                 </select>
+                {customFor === p.id && (
+                  <form
+                    className="mt-2 flex gap-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const n = Math.round(Number(customValue));
+                      if (Number.isFinite(n) && n >= 0 && n <= 5000) {
+                        setGap(p, n);
+                        setCustomFor(null);
+                      } else {
+                        setError("Gap must be a number from 0 to 5000.");
+                      }
+                    }}
+                  >
+                    <label htmlFor={`gap-custom-${p.id}`} className="sr-only">
+                      Custom gap in pixels
+                    </label>
+                    <input
+                      id={`gap-custom-${p.id}`}
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={5000}
+                      value={customValue}
+                      onChange={(e) => setCustomValue(e.target.value)}
+                      className="min-h-11 w-full min-w-0 rounded-xl border-2 border-line bg-bg px-2 text-base"
+                    />
+                    <button type="submit" className="btn btn-quiet !min-h-11 !px-3 text-sm">
+                      Set
+                    </button>
+                  </form>
+                )}
               </div>
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2">

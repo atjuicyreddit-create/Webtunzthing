@@ -82,7 +82,7 @@ export function SeriesForm({ series }: { series?: Series }) {
           className={fieldClass}
         />
       </Field>
-      <Field label="Cover image address (optional)" htmlFor="cover_url" hint="A link to an image. Not shown on the site yet.">
+      <Field label="Cover image address (optional)" htmlFor="cover_url" hint="A link to an image for the home page. Leave empty to use the first panel.">
         <input
           id="cover_url"
           name="cover_url"
