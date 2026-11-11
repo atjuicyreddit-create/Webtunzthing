@@ -157,9 +157,10 @@ export function buildPanelPrompt(input: {
     text: `MUST NOT APPEAR: speech bubbles, captions, sound effects, any text, letters or numbers${modelText.length ? ` (except the label text given above)` : ""}, logos, watermarks. ${castLine}`,
   });
   const space: string[] = [];
-  if (p.caption?.trim()) space.push("leave clear plain wall or sky across the top for a caption box");
-  if (p.dialogue.length) space.push("leave clear space near the speaker's head for a speech balloon");
-  if (space.length) blocks.push({ name: "9. Space for lettering", text: `SPACE: ${space.join("; ")}.` });
+  // Worded as composition, not "leave space": a live test drew a literal empty white band with a border.
+  if (p.caption?.trim()) space.push("frame the shot so the top fifth of the picture is calm, uncluttered background (wall, ceiling or sky) that is part of the same scene");
+  if (p.dialogue.length) space.push("keep some calm background beside the speaker's head");
+  if (space.length) blocks.push({ name: "9. Space for lettering", text: `COMPOSITION: ${space.join("; ")}. Full-bleed artwork, edge to edge: no borders, frames, gutters or empty bands.` });
   if (input.matched) blocks.push({ name: "Matched shot", text: `MATCHED SHOT: same camera, same framing, same distance as reference ${refIndex(`Panel ${input.matched.number} (camera to match)`) || 1}.` });
   if (input.fix) blocks.push({ name: "Fix", text: `EDIT of reference 1: keep everything identical, and change only this: ${sentence(input.fix.change)}` });
   const lessons = input.lessons.map((l) => ({ id: l.id, lesson: l.lesson }));

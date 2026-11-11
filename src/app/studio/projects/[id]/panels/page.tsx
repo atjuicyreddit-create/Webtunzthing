@@ -135,7 +135,7 @@ export default async function PanelsPage({
     <>
       {tabs}
       <div className="mt-4"><Notice error={sp.error} ok={sp.ok} warn={sp.warn} /></div>
-      <JobPoller jobIds={pendingJobs} />
+      <JobPoller key={pendingJobs.join(",") || "none"} jobIds={pendingJobs} />
       <div className="s-card mt-3 flex flex-wrap items-center justify-between gap-3 p-4">
         <p className="text-sm">
           Episode {episode.number}: {pc.panels.length} panels · images {formatUsd(spent)} of {formatUsd(settings.episode_image_cap_usd)} · up to {settings.max_takes_per_panel} takes a panel

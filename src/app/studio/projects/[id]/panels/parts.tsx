@@ -199,7 +199,7 @@ export function PromptSection({
         {row.precheck && (
           <div className={`rounded-xl border-2 p-3 ${precheckCurrent ? "border-[var(--s-cobalt)]" : "border-[var(--s-line)] opacity-70"}`}>
             <p className="font-bold">
-              Claude&rsquo;s pre-check{precheckCurrent ? "" : " (for an older version of this prompt)"}:{row.precheck.ok ? "no problems found" : "issues to read"}
+              Claude&rsquo;s pre-check{precheckCurrent ? "" : " (for an older version of this prompt)"}: {row.precheck.ok ? "no problems found" : "issues to read"}
             </p>
             {row.precheck.issues.length > 0 && <ul className="list-disc pl-5">{row.precheck.issues.map((x) => <li key={x}>{x}</li>)}</ul>}
             <p className="s-muted text-xs">{row.precheck.note}</p>

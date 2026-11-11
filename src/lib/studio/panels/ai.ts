@@ -37,6 +37,9 @@ const PRE_SYSTEM = `You check image-generation prompts for an original vertical 
 Report problems only; never rewrite the prompt. Look for: anything described that shouldn't appear (naming an unwanted object invites it),
 characters mentioned who aren't in the panel, missing costume locks, clock times or words the model might draw as text,
 two actions in one panel, a matched shot without "same camera" wording, and anything that contradicts the script panel.
+Not problems (house rules, don't report them): blocks with nothing to say are left out, so gaps in the block numbers are normal;
+costume locks deliberately state what a character never wears, and the "must not appear" block deliberately lists exclusions;
+a character with no reference image listed was marked "no design needed" on purpose.
 Write in British English, one short sentence per issue.`;
 
 const PRE_SCHEMA = {

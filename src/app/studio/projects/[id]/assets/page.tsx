@@ -144,7 +144,7 @@ export default async function AssetsPage({
       <div className="mt-4">
         <Notice error={sp.error} ok={sp.ok} warn={sp.warn} />
       </div>
-      <JobPoller jobIds={pendingJobs} />
+      <JobPoller key={pendingJobs.join(",") || "none"} jobIds={pendingJobs} />
 
       <div className="s-card mt-3 flex flex-wrap items-center justify-between gap-3 p-4">
         <p className="text-sm">
