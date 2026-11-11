@@ -157,6 +157,20 @@ export async function afterStoryChange(supabase: SupabaseClient, projectId: stri
     });
   }
 
+  // The story is upstream of every script: an approved script no longer matches a changed story.
+  if (lastFp !== undefined && lastFp !== fp) {
+    const { data: scriptGates } = await supabase
+      .from("studio_gates")
+      .select("id")
+      .eq("project_id", projectId)
+      .eq("gate", "script_final")
+      .eq("state", "approved");
+    for (const g of scriptGates ?? []) {
+      await supabase.from("studio_gates").update({ state: "stale", updated_at: new Date().toISOString() }).eq("id", g.id);
+      await supabase.from("studio_gate_events").insert({ gate_id: g.id, action: "stale", actor: userId, note: `Story changed: ${reason}`, fingerprint: fp });
+    }
+  }
+
   if (s.gate?.state === "approved" && s.gate.fingerprint !== fp) {
     await supabase
       .from("studio_gates")

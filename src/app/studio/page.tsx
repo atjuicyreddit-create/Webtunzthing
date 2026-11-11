@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { createProject } from "./actions";
+import { createProject, importMorningBrew } from "./actions";
 import { Notice } from "@/components/studio/Notice";
 import { SubmitButton } from "@/components/studio/ui";
 import { requireStudio } from "@/lib/studio/auth";
+import { morningBrewAvailable } from "@/lib/studio/seed/morningBrew";
 import { formatUsd } from "@/lib/studio/settings";
 
 // The layout's title template doesn't apply to a page in the same folder, so set it in full.
@@ -15,6 +16,7 @@ export default async function StudioHome({
 }) {
   const { supabase } = await requireStudio();
   const { error, deleted } = await searchParams;
+  const canImport = morningBrewAvailable();
   const [{ data: projects }, { data: spend }] = await Promise.all([
     supabase.from("studio_projects").select("id,title,format,is_test,created_at").order("created_at", { ascending: false }),
     supabase.from("studio_ai_calls").select("project_id,actual_usd,estimated_usd,status").in("status", ["done", "reserved"]),
@@ -92,6 +94,17 @@ export default async function StudioHome({
             Create project
           </SubmitButton>
         </form>
+        {canImport && (
+          <form className="mt-5 border-t border-[var(--s-line)] pt-4">
+            <p className="text-sm">
+              <strong>Morning Brew test project.</strong> Imports script v3.5 and the characters from studio-reference on this
+              computer, flagged as a test (it can never touch the live series). Only works locally.
+            </p>
+            <SubmitButton formAction={importMorningBrew} variant="quiet" pendingText="Importing…" className="mt-2 w-full">
+              Import Morning Brew (test)
+            </SubmitButton>
+          </form>
+        )}
       </aside>
     </div>
   );

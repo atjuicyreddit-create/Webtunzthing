@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { aiClaude, aiImage } from "@/lib/studio/ai/aiCall";
 import { requireStudio } from "@/lib/studio/auth";
+import { morningBrewAvailable, parseMorningBrew } from "@/lib/studio/seed/morningBrew";
 import { formatUsd, getStudioSettings } from "@/lib/studio/settings";
 
 // One server action per button (a button's name/value doesn't reach actions here).
@@ -61,6 +62,83 @@ export async function deleteProject(form: FormData) {
   if (error) back(`/studio/projects/${id}`, { error: "Couldn't delete the project." });
   revalidatePath("/studio");
   back("/studio", { deleted: "1" });
+}
+
+// ---------------------------------------------------------------- Morning Brew test import (local only)
+
+export async function importMorningBrew(form: FormData) {
+  const { supabase } = await requireStudio();
+  void form;
+  if (!morningBrewAvailable()) {
+    back("/studio", { error: "The Morning Brew files aren't on this computer. The import only works locally (studio-reference/ isn't deployed)." });
+  }
+  const mb = parseMorningBrew();
+  const { data: project, error } = await supabase
+    .from("studio_projects")
+    .insert({
+      title: "Morning Brew (test import)",
+      is_test: true,
+      format: "serial",
+      idea: mb.idea,
+      logline: mb.oneLine,
+      one_line: mb.oneLine,
+      episodes_planned: 1,
+    })
+    .select("id")
+    .single();
+  if (error || !project) back("/studio", { error: "Couldn't create the test project. Have migrations 0005 to 0008 been run?" });
+  const pid = project.id;
+
+  const answers = Object.entries(mb.answers)
+    .filter(([, v]) => v)
+    .map(([k, v]) => ({ project_id: pid, question_key: k, answer: v.slice(0, 1000), source: "own" }));
+  if (answers.length) await supabase.from("studio_story_answers").insert(answers);
+  if (mb.characters.length) {
+    await supabase
+      .from("studio_characters")
+      .insert(mb.characters.map((c, i) => ({ project_id: pid, position: i, name: c.name, role: c.role, sheet: c.sheet })));
+  }
+
+  const { data: ep } = await supabase.from("studio_episodes").insert({ project_id: pid, number: 1, title: "Morning Brew" }).select("id").single();
+  if (!ep) back("/studio", { error: "Couldn't create the test episode." });
+  await supabase.from("studio_acts").insert({ project_id: pid, episode_id: ep.id, position: 1, title: "Episode 1" });
+  const { data: script } = await supabase
+    .from("studio_scripts")
+    .insert({ project_id: pid, episode_id: ep.id, version: 1, changelog: "Imported from story.md v3.5 (not marked final)" })
+    .select("id")
+    .single();
+  if (script) {
+    const keys = mb.panels.map((_, i) => `p${String(i + 1).padStart(2, "0")}`);
+    await supabase.from("studio_script_panels").insert(
+      mb.panels.map((p, i) => ({
+        script_id: script.id,
+        panel_key: keys[i],
+        position: i + 1,
+        title: p.title.slice(0, 120),
+        shot: p.shot.slice(0, 120) || null,
+        characters: p.dialogue.length || /pudding/i.test(p.action) ? ["Pudding"] : [],
+        action: p.action.slice(0, 2000),
+        caption: p.caption.slice(0, 200) || null,
+        dialogue: p.dialogue,
+        size: p.size,
+        gap_after: p.gap_after,
+        clock: p.clock || null,
+        matches_key: p.matches > 0 && p.matches <= i ? keys[p.matches - 1] : null,
+        text_items: p.caption ? [{ text: p.caption, how: "lettered" }] : [],
+      })),
+    );
+  }
+  await supabase.from("studio_forks").insert({
+    project_id: pid,
+    episode_id: ep.id,
+    question: mb.fork.question || null,
+    in_bounds: mb.fork.in_bounds || null,
+    locked: mb.fork.locked || null,
+    backup_pick: mb.fork.backup_pick || null,
+    branches: [],
+  });
+  revalidatePath("/studio");
+  redirect(`/studio/projects/${pid}/script?ep=${ep.id}&ok=${encodeURIComponent(`Imported Morning Brew as a test project: ${mb.panels.length} panels, ${mb.characters.length} characters. Every gate is open.`)}`);
 }
 
 // ---------------------------------------------------------------- settings

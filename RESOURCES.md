@@ -1,7 +1,7 @@
 # Pathtoon Studio: resources
 
 Everything the studio needs, in one place. Kept up to date at every stage.
-Last updated: 11 November 2026 (Stage 2).
+Last updated: 11 November 2026 (Stage 3).
 
 ## Services and keys
 
@@ -91,5 +91,16 @@ and a `payload` column to `studio_suggestions` for reorder suggestions):
 | `studio_scenes` | Scene cards: purpose, beat, characters, location, props, plants, payoffs, real-world step, vote question |
 
 Function: `studio_reorder_episodes` (renumbers episodes in one go).
+
+Stage 3 (migration `0008_studio_script.sql`, admin-only):
+
+| Table | Holds |
+|---|---|
+| `studio_scripts` | Each version of an episode's script (changelog, Claude's check of that version) |
+| `studio_script_panels` | Panels of a version: visual, caption, dialogue, size, gap after, props, clock, matched panel, text in art |
+| `studio_props` | The project's prop table (owner, rule) |
+| `studio_forks` | A serial episode's vote card: question, in bounds, locked, backup pick, branches |
+
+The Morning Brew test import reads `studio-reference/morning-brew/` on your computer, so it only works locally.
 
 Functions: `studio_reserve_ai_call` (checks limits and reserves cost, under a lock), `studio_finish_ai_call`.
