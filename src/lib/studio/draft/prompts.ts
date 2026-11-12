@@ -25,24 +25,78 @@ const bool = { type: "boolean" } as const;
 const int = { type: "integer" } as const;
 const obj = (properties: Record<string, unknown>) => ({ type: "object", properties, required: Object.keys(properties), additionalProperties: false });
 const arr = (items: unknown) => ({ type: "array", items });
-const fact = obj({ text: str, from: str, guessed: bool });
-const entry = obj({ name: str, role: str, facts: arr(fact) });
 
+// Kept flat on purpose: a deeply nested schema is rejected ("compiled grammar is too large").
+// The reply is converted to the stored shape (portfolio, health) in toReply().
 const SCHEMA = obj({
   synopsis: str,
   beats: arr(obj({ id: str, heading: str, text: str })),
   blanks: arr(obj({ id: str, beat_id: str, question: str, kind: { type: "string", enum: ["plot", "detail"] }, guess: str, options: arr(str) })),
-  portfolio: obj({ characters: arr(entry), places: arr(entry), objects: arr(entry), mysteries: arr(obj({ text: str, from: str })) }),
-  health: obj({
-    spine: obj(Object.fromEntries(QUESTIONS.map((q) => [q.key, str]))),
-    one_line: str,
-    one_line_passes: bool,
-    notes: arr(obj({ level: { type: "string", enum: ["ok", "weak"] }, text: str })),
-    panels_estimate: int,
-    episode_split: str,
-  }),
+  entries: arr(obj({ kind: { type: "string", enum: ["character", "place", "object"] }, name: str, role: str, facts: arr(obj({ text: str, from: str, guessed: bool })) })),
+  mysteries: arr(str),
+  spine: arr(obj({ key: str, text: str })),
+  one_line: str,
+  one_line_passes: bool,
+  notes: arr(obj({ weak: bool, text: str })),
+  panels_estimate: int,
+  episode_split: str,
   changes: arr(str),
 });
+
+type RawEntry = { kind: "character" | "place" | "object"; name: string; role: string; facts: { text: string; from: string; guessed: boolean }[] };
+type RawReply = DraftBody & {
+  entries: RawEntry[];
+  mysteries: string[];
+  spine: { key: string; text: string }[];
+  one_line: string;
+  one_line_passes: boolean;
+  notes: { weak: boolean; text: string }[];
+  panels_estimate: number;
+  episode_split: string;
+  changes: string[];
+};
+
+function toReply(r: RawReply): DraftReply {
+  const pick = (k: RawEntry["kind"]) => (r.entries ?? []).filter((e) => e.kind === k).map(({ name, role, facts }) => ({ name, role, facts: facts ?? [] }));
+  const spine = Object.fromEntries(QUESTIONS.map((q) => [q.key, r.spine?.find((x) => x.key === q.key)?.text ?? ""])) as Record<QuestionKey, string>;
+  return {
+    synopsis: r.synopsis,
+    beats: r.beats,
+    blanks: r.blanks,
+    portfolio: { characters: pick("character"), places: pick("place"), objects: pick("object"), mysteries: (r.mysteries ?? []).map((text) => ({ text, from: "" })) },
+    health: {
+      spine,
+      one_line: r.one_line,
+      one_line_passes: !!r.one_line_passes,
+      notes: (r.notes ?? []).map((n) => ({ level: n.weak ? "weak" : "ok", text: n.text })),
+      panels_estimate: r.panels_estimate,
+      episode_split: r.episode_split,
+    },
+    changes: r.changes ?? [],
+  };
+}
+
+/** The stored shape back to the reply shape, for the dry run. */
+function toRaw(d: DraftReply): RawReply {
+  return {
+    synopsis: d.synopsis,
+    beats: d.beats,
+    blanks: d.blanks,
+    entries: [
+      ...d.portfolio.characters.map((e) => ({ ...e, kind: "character" as const })),
+      ...d.portfolio.places.map((e) => ({ ...e, kind: "place" as const })),
+      ...d.portfolio.objects.map((e) => ({ ...e, kind: "object" as const })),
+    ],
+    mysteries: d.portfolio.mysteries.map((m) => m.text),
+    spine: Object.entries(d.health.spine).map(([key, text]) => ({ key, text })),
+    one_line: d.health.one_line,
+    one_line_passes: d.health.one_line_passes,
+    notes: d.health.notes.map((n) => ({ weak: n.level === "weak", text: n.text })),
+    panels_estimate: d.health.panels_estimate,
+    episode_split: d.health.episode_split,
+    changes: d.changes,
+  };
+}
 
 const RULES = `How to write the draft:
 1. Tom's telling is the source. Keep his events, their order and every detail he gives. Never add a plot event he didn't write. Where the logic has a hole, add a blank instead of filling it.
@@ -51,8 +105,8 @@ const RULES = `How to write the draft:
    - kind "plot": anything that changes what happens or why (motives, identities, causes, how a problem gets solved, what a character decides). Never decide these. Give your best guess in "guess" and 2 or 3 genuinely different "options". At most 6 plot blanks open at once, most important first.
    - kind "detail": small things (time of day, weather, what a room or outfit looks like). Pick a sensible guess; the draft reads using it. 2 or 3 options too.
    - Only ask what matters for the logic or for drawing the panels. Don't ask about things Tom already said.
-4. Portfolio: every character, place and object mentioned, each with facts. "from" quotes the few words of Tom's telling (or his answers) it came from. "guessed" is true when you inferred it rather than Tom saying it. Mysteries are the open questions the story raises on purpose (keep them open; don't solve them).
-5. Health: fill the spine from the story as it stands ("" where it isn't there yet). one_line follows "[Lead] wants [X] because [Y], but [flaw/obstacle], so [ending]."; one_line_passes says whether the story really supports it. Give 2 to 5 short notes against the story guidelines (level "weak" for a real problem, "ok" for something working). panels_estimate is roughly one panel per drawable moment. If it's over about 22 panels, episode_split names the beat where episode 1 should end and why; otherwise "".
+4. Portfolio ("entries" and "mysteries"): every character, place and object mentioned, each with facts. "from" quotes the few words of Tom's telling (or his answers) it came from. "guessed" is true when you inferred it rather than Tom saying it. Mysteries are the open questions the story raises on purpose (keep them open; don't solve them).
+5. Health: fill "spine" with one item per key (lead, want, why_today, obstacle, flaw, need, stakes, ending, world_rules) from the story as it stands ("" where it isn't there yet). one_line follows "[Lead] wants [X] because [Y], but [flaw/obstacle], so [ending]."; one_line_passes says whether the story really supports it. Give 2 to 5 short notes against the story guidelines (weak = true for a real problem, false for something working). panels_estimate is roughly one panel per drawable moment. If it's over about 22 panels, episode_split names the beat where episode 1 should end and why; otherwise "".
 6. synopsis: one sentence saying what this story is about.`;
 
 function context(i: DraftInput): string {
@@ -181,18 +235,18 @@ export async function runDraft(supabase: SupabaseClient, i: DraftInput): Promise
     maxTokens: req.maxTokens,
     effort: req.effort,
     schema: req.schema,
-    dryRunText: JSON.stringify(dryRunReply(i)),
+    dryRunText: JSON.stringify(toRaw(dryRunReply(i))),
   });
   if (!r.ok) return { ok: false, reason: r.reason };
   if (r.truncated) return { ok: false, reason: "Claude's answer was cut off (too long). Try a shorter telling, or split it into two episodes." };
   let reply: DraftReply;
   try {
-    reply = JSON.parse(r.text) as DraftReply;
+    reply = toReply(JSON.parse(r.text) as RawReply);
   } catch {
     return { ok: false, reason: "Claude's answer couldn't be read. Please try again (the cost was logged)." };
   }
   if (!Array.isArray(reply.beats) || !reply.beats.length) return { ok: false, reason: "Claude returned an empty draft. Please try again." };
   const cost = r.dryRun ? "dry run, $0" : r.costUsd < 0.01 ? `$${r.costUsd.toFixed(4)}` : `$${r.costUsd.toFixed(2)}`;
-  const warn = r.warn ? ` You've used ${r.percent}% of a limit.` : "";
-  return { ok: true, reply, note: `${cost}.${warn}`, ledgerId: r.ledgerId };
+  const warn = r.warn ? `; you've used ${r.percent}% of a limit` : "";
+  return { ok: true, reply, note: `${cost}${warn}`, ledgerId: r.ledgerId };
 }
