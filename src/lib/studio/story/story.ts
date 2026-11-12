@@ -124,7 +124,7 @@ export function storyGaps(s: Story): string[] {
   if (s.characters.length === 0) gaps.push("Add at least the lead's character sheet.");
   if (s.project.format === "serial") {
     if (!s.project.destination?.trim()) gaps.push("Set the season's destination.");
-    if (s.milestones.length < 3 || s.milestones.length > 5) gaps.push("Set 3 to 5 growth milestones.");
+    if (s.milestones.length < 3 || s.milestones.length > 5) gaps.push(`Set 3 to 5 growth milestones in Season plot, one per line (you have ${s.milestones.length}).`);
   }
   if (s.suggestions.some((x) => x.status === "pending")) gaps.push("Accept or reject each plot suggestion.");
   return gaps;

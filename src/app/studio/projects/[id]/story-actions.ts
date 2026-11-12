@@ -389,6 +389,17 @@ export async function draftPlot(form: FormData) {
   go(story(c.id, "plot"), { ok: `Plot drafted. Anything you'd already written was kept (${r.note})` });
 }
 
+/**
+ * Milestones are one per line, but people often type them on one line split by commas
+ * ("A - x, B - y, C - z"). With fewer than 3 lines, split at a comma only when a new
+ * "Title - " follows it, so ordinary commas inside a description are left alone.
+ */
+function milestoneLines(raw: string): string[] {
+  const rows = lines(raw, 10_000, 99);
+  if (rows.length >= 3) return rows;
+  return lines(raw.replace(/,\s*(?=[^,\n]{1,120}?\s[–-]\s)/g, "\n"), 10_000, 99);
+}
+
 export async function savePlot(form: FormData) {
   const c = await ctx(form);
   await c.supabase
@@ -396,7 +407,7 @@ export async function savePlot(form: FormData) {
     .update({ season_summary: clip(t(form, "season_summary"), 2000) || null, destination: clip(t(form, "destination"), 500) || null })
     .eq("id", c.id);
   if (c.s.project.format === "serial") {
-    const ms = lines(t(form, "milestones"), 400, 5);
+    const ms = milestoneLines(t(form, "milestones")).slice(0, 5).map((x) => clip(x, 400));
     await c.supabase.from("studio_milestones").delete().eq("project_id", c.id);
     if (ms.length) {
       await c.supabase.from("studio_milestones").insert(
@@ -408,6 +419,13 @@ export async function savePlot(form: FormData) {
     }
   }
   await done(c, "Season plot edited");
+  if (c.s.project.format === "serial") {
+    const n = milestoneLines(t(form, "milestones")).length;
+    if (n < 3 || n > 5)
+      go(story(c.id, "plot"), {
+        error: `Plot saved, but you wrote ${n === 1 ? "1 milestone" : `${n} milestones`}${n > 5 ? " and only the first 5 were kept" : ""}. You need 3 to 5 to approve the story. Put each one on its own line.`,
+      });
+  }
   go(story(c.id, "plot"), { ok: "Plot saved." });
 }
 
