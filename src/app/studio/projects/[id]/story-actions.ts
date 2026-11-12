@@ -6,7 +6,7 @@ import { withParams } from "@/lib/studio/url";
 import { requireStudio } from "@/lib/studio/auth";
 import { QUESTION_KEYS, questionByKey, type QuestionKey } from "@/lib/studio/story/questions";
 import { runStoryAction } from "@/lib/studio/story/run";
-import { afterStoryChange, fingerprint, loadStory, storyGaps } from "@/lib/studio/story/story";
+import { afterStoryChange, loadStory, recordStoryApproval, storyGaps } from "@/lib/studio/story/story";
 
 // One server action per button. Each re-checks access; the database rules apply too.
 // Claude actions go through the cost gateway (estimate, caps, ledger, dry-run).
@@ -449,25 +449,8 @@ export async function approveStory(form: FormData) {
   const c = await ctx(form);
   const gaps = storyGaps(c.s);
   if (gaps.length) go(story(c.id, "approve"), { error: "Not ready yet: see the list below." });
-  const fp = fingerprint(c.s);
   const note = clip(t(form, "note"), 500) || null;
-  const now = new Date().toISOString();
-  let gateId = c.s.gate?.id;
-  if (gateId) {
-    await c.supabase
-      .from("studio_gates")
-      .update({ state: "approved", fingerprint: fp, approved_by: c.user.id, approved_at: now, note, updated_at: now })
-      .eq("id", gateId);
-  } else {
-    const { data } = await c.supabase
-      .from("studio_gates")
-      .insert({ project_id: c.id, gate: "story_approved", state: "approved", fingerprint: fp, approved_by: c.user.id, approved_at: now, note })
-      .select("id")
-      .single();
-    gateId = data?.id;
-  }
-  if (!gateId) go(story(c.id, "approve"), { error: "Couldn't record the approval." });
-  await c.supabase.from("studio_gate_events").insert({ gate_id: gateId, action: "approved", actor: c.user.id, note, fingerprint: fp });
+  if (!(await recordStoryApproval(c.supabase, c.s, c.user.id, note))) go(story(c.id, "approve"), { error: "Couldn't record the approval." });
   revalidatePath(`/studio/projects/${c.id}`, "layout");
   go(story(c.id, "approve"), { ok: "Story approved. Recorded with your name, the time and your note." });
 }

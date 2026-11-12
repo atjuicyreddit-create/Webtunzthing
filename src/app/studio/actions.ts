@@ -34,7 +34,8 @@ export async function createProject(form: FormData) {
     .single();
   if (error || !data) back("/studio", { error: "Couldn't create the project. Has the Stage 0 database update been run?" });
   revalidatePath("/studio");
-  redirect(`/studio/projects/${data.id}?created=1`);
+  // New projects start on the story writer (story_mode defaults to "draft").
+  redirect(`/studio/projects/${data.id}/story`);
 }
 
 export async function renameProject(form: FormData) {
@@ -86,6 +87,7 @@ export async function importMorningBrew(form: FormData) {
       logline: mb.oneLine,
       one_line: mb.oneLine,
       episodes_planned: 1,
+      story_mode: "classic",
     })
     .select("id")
     .single();

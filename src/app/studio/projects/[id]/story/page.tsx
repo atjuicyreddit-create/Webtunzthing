@@ -9,6 +9,8 @@ import { getStudioSettings } from "@/lib/studio/settings";
 import { QUESTIONS, QUESTION_KEYS, STORY_STEPS, type QuestionKey, type StoryStep } from "@/lib/studio/story/questions";
 import { estimateStoryAction } from "@/lib/studio/story/run";
 import { loadStory, storyGaps } from "@/lib/studio/story/story";
+import { WriterPage } from "./writer-page";
+import { ModeSwitch } from "./writer";
 
 export const metadata = { title: "Story builder" };
 
@@ -17,13 +19,14 @@ export default async function StoryPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ step?: string; q?: string; c?: string; error?: string; ok?: string }>;
+  searchParams: Promise<{ step?: string; q?: string; c?: string; error?: string; ok?: string; pending?: string }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
   const { supabase } = await requireStudio(`/studio/projects/${id}/story`);
   const [s, settings] = await Promise.all([loadStory(supabase, id), getStudioSettings(supabase)]);
   if (!s) notFound();
+  if (s.project.story_mode === "draft") return <WriterPage s={s} settings={settings} supabase={supabase} sp={sp} />;
 
   const step: StoryStep = (STORY_STEPS.find((x) => x.key === sp.step)?.key ?? "cards") as StoryStep;
   const firstOpen = QUESTION_KEYS.find((k) => !s.answers[k]?.answer?.trim()) ?? QUESTION_KEYS[0];
@@ -71,6 +74,15 @@ export default async function StoryPage({
             {settings?.dry_run && <strong className="block">Dry-run is on: replies are placeholders and cost nothing.</strong>}
           </p>
           <p className="s-muted">Claude never changes your answers on its own. Suggestions wait for you to pick or accept them.</p>
+          {s.project.story_mode === "classic" && (
+            <div className="border-t-2 border-[var(--s-line)] pt-3">
+              <p className="font-bold">New: the story writer</p>
+              <p className="s-muted text-xs">Tell the episode in your own words; Claude drafts it, asks only about the gaps and files every detail.</p>
+              <div className="mt-2">
+                <ModeSwitch id={id} to="draft" />
+              </div>
+            </div>
+          )}
         </>
       }
     >

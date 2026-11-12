@@ -31,7 +31,8 @@ export default async function ProjectPage({
     .reduce((n, c) => n + Number(c.actual_usd ?? c.estimated_usd ?? 0), 0);
   const answered = QUESTIONS.filter((q) => s.answers[q.key]?.answer?.trim()).length;
   const gaps = storyGaps(s);
-  const next = !project.idea ? "idea" : !project.logline ? "idea" : "story";
+  const writer = project.story_mode === "draft";
+  const next = writer ? "story" : !project.idea ? "idea" : !project.logline ? "idea" : "story";
 
   return (
     <ProjectShell projectId={id} storyGate={s.gate?.state ?? null}>
@@ -48,11 +49,17 @@ export default async function ProjectPage({
       <div className="s-card mt-4 p-5">
         <h2 className="s-head text-lg">Progress</h2>
         <ul className="mt-2 space-y-1 text-sm">
-          <li>Idea: {project.idea ? "written" : "not yet"}</li>
-          <li>Logline: {project.logline ?? "not chosen yet"}</li>
-          <li>
-            Story questions: {answered} of {QUESTIONS.length} answered
-          </li>
+          {writer ? (
+            <li>Story writer: {s.draft ? `version ${s.draft.version}${s.draft.draft.synopsis ? ` · ${s.draft.draft.synopsis}` : ""}` : "not started"}</li>
+          ) : (
+            <>
+              <li>Idea: {project.idea ? "written" : "not yet"}</li>
+              <li>Logline: {project.logline ?? "not chosen yet"}</li>
+              <li>
+                Story questions: {answered} of {QUESTIONS.length} answered
+              </li>
+            </>
+          )}
           <li>Characters: {s.characters.length}</li>
           <li>
             Story gate:{" "}
@@ -62,7 +69,7 @@ export default async function ProjectPage({
           </li>
         </ul>
         <Link href={`/studio/projects/${id}/${next}`} className="s-btn s-btn-primary mt-4">
-          Continue: {next === "idea" ? "Idea" : "Story builder"}
+          Continue: {next === "idea" ? "Idea" : writer ? "Story writer" : "Story builder"}
         </Link>
       </div>
 

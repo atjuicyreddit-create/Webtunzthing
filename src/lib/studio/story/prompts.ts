@@ -3,6 +3,7 @@ import type { Effort } from "../ai/aiCall";
 import { HOUSE_RULES, STORY_GUIDELINES } from "./guidelines";
 import { QUESTIONS, questionByKey, type QuestionKey } from "./questions";
 import type { Story } from "./story";
+import { resolveBeat } from "../draft/types";
 
 // Every Claude request the story builder makes is built here, so the page can show the
 // cost estimate for exactly the request the button will send.
@@ -75,6 +76,18 @@ export function storyContext(s: Story, opts: { includeCharacters?: boolean } = {
     for (const c of s.characters) {
       lines.push(`- ${c.name} (${c.role}): want ${c.sheet.want ?? "?"}; flaw ${c.sheet.flaw ?? "?"}; voice ${c.sheet.voice ?? "?"}`);
     }
+  }
+  const d = s.project.story_mode === "draft" ? s.draft : null;
+  if (d && d.draft.beats.length) {
+    lines.push("", "Tom's story draft (his own telling, organised; follow its events, order and dialogue closely):");
+    if (d.quickstart.setting) lines.push(`Setting: ${d.quickstart.setting}`);
+    if (d.draft.synopsis) lines.push(`In one sentence: ${d.draft.synopsis}`);
+    d.draft.beats.forEach((b, i) => lines.push(`${i + 1}. ${b.heading}: ${resolveBeat(b.text, d.draft.blanks)}`));
+    const facts = [...d.portfolio.characters, ...d.portfolio.places, ...d.portfolio.objects]
+      .filter((e) => e.facts.length)
+      .map((e) => `- ${e.name}${e.role ? ` (${e.role})` : ""}: ${e.facts.map((f) => f.text).join("; ")}`);
+    if (facts.length) lines.push("", "Story portfolio (details Tom mentioned):", ...facts);
+    if (d.portfolio.mysteries.length) lines.push("", "Open mysteries (keep them open):", ...d.portfolio.mysteries.map((m) => `- ${m.text}`));
   }
   return lines.join("\n");
 }

@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { normaliseRow, openPlotBlanks, resolveBeat, type DraftRow } from "../draft/types";
 import { QUESTIONS } from "./questions";
 
 export type Project = {
@@ -18,6 +19,8 @@ export type Project = {
   one_line_check: { passes: boolean; problems: string[] } | null;
   season_summary: string | null;
   destination: string | null;
+  /** "draft" = the story writer; "classic" = question cards. Missing before migration 0012. */
+  story_mode?: "classic" | "draft";
 };
 
 export type Answer = {
@@ -60,12 +63,14 @@ export type Story = {
   milestones: Milestone[];
   suggestions: Suggestion[];
   gate: Gate | null;
+  /** Latest story-writer version (null if none, or before migration 0012). */
+  draft: DraftRow | null;
 };
 
 export async function loadStory(supabase: SupabaseClient, projectId: string): Promise<Story | null> {
   const { data: project } = await supabase.from("studio_projects").select("*").eq("id", projectId).maybeSingle();
   if (!project) return null;
-  const [answers, whys, characters, milestones, suggestions, gate] = await Promise.all([
+  const [answers, whys, characters, milestones, suggestions, gate, draft] = await Promise.all([
     supabase.from("studio_story_answers").select("question_key,answer,source,suggestions").eq("project_id", projectId),
     supabase.from("studio_why_items").select("id,position,item,question,reason").eq("project_id", projectId).order("position"),
     supabase.from("studio_characters").select("id,position,name,role,sheet").eq("project_id", projectId).order("position"),
@@ -78,6 +83,7 @@ export async function loadStory(supabase: SupabaseClient, projectId: string): Pr
       .eq("gate", "story_approved")
       .is("episode_id", null)
       .maybeSingle(),
+    supabase.from("studio_story_drafts").select("*").eq("project_id", projectId).order("version", { ascending: false }).limit(1).maybeSingle(),
   ]);
   const map: Record<string, Answer> = {};
   for (const a of (answers.data ?? []) as Answer[]) map[a.question_key] = a;
@@ -89,6 +95,7 @@ export async function loadStory(supabase: SupabaseClient, projectId: string): Pr
     milestones: (milestones.data ?? []) as Milestone[],
     suggestions: (suggestions.data ?? []) as Suggestion[],
     gate: (gate.data as Gate) ?? null,
+    draft: draft.data ? normaliseRow(draft.data) : null,
   };
 }
 
@@ -106,6 +113,10 @@ export function storyContent(s: Story) {
     destination: s.project.destination ?? "",
     milestones: s.milestones.map((m) => [m.title, m.description ?? ""]),
     accepted: s.suggestions.filter((x) => x.status === "accepted").map((x) => x.text),
+    // Only story-writer projects carry this key, so classic fingerprints don't change.
+    ...(isDraftMode(s) && s.draft
+      ? { draft: { synopsis: s.draft.draft.synopsis, beats: s.draft.draft.beats.map((b) => resolveBeat(b.text, s.draft!.draft.blanks)) } }
+      : {}),
   };
 }
 
@@ -115,6 +126,7 @@ export function fingerprint(s: Story): string {
 
 /** What still blocks approval (empty list = ready). */
 export function storyGaps(s: Story): string[] {
+  if (isDraftMode(s)) return draftGaps(s);
   const gaps: string[] = [];
   if (!s.project.logline?.trim()) gaps.push("Pick or write a logline (Idea).");
   for (const q of QUESTIONS) if (!s.answers[q.key]?.answer?.trim()) gaps.push(`Answer: ${q.title}`);
@@ -128,6 +140,39 @@ export function storyGaps(s: Story): string[] {
   }
   if (s.suggestions.some((x) => x.status === "pending")) gaps.push("Accept or reject each plot suggestion.");
   return gaps;
+}
+
+export const isDraftMode = (s: Story) => s.project.story_mode === "draft";
+
+/** Story writer: the draft exists and every plot question is answered. Story health only advises. */
+export function draftGaps(s: Story): string[] {
+  if (!s.draft || !s.draft.draft.beats.length) return ["Tell your story and let Claude read it."];
+  const open = openPlotBlanks(s.draft.draft).length;
+  if (open) return [`Answer ${open === 1 ? "the 1 story question" : `the ${open} story questions`} in the draft, then press Update story.`];
+  return [];
+}
+
+/** Records the Story approved gate (shared by the question cards and the story writer). */
+export async function recordStoryApproval(supabase: SupabaseClient, s: Story, userId: string, note: string | null): Promise<boolean> {
+  const fp = fingerprint(s);
+  const now = new Date().toISOString();
+  let gateId = s.gate?.id;
+  if (gateId) {
+    await supabase
+      .from("studio_gates")
+      .update({ state: "approved", fingerprint: fp, approved_by: userId, approved_at: now, note, updated_at: now })
+      .eq("id", gateId);
+  } else {
+    const { data } = await supabase
+      .from("studio_gates")
+      .insert({ project_id: s.project.id, gate: "story_approved", state: "approved", fingerprint: fp, approved_by: userId, approved_at: now, note })
+      .select("id")
+      .single();
+    gateId = data?.id;
+  }
+  if (!gateId) return false;
+  await supabase.from("studio_gate_events").insert({ gate_id: gateId, action: "approved", actor: userId, note, fingerprint: fp });
+  return true;
 }
 
 /** Writes a version snapshot and, if the approved story changed, marks the gate stale. */
