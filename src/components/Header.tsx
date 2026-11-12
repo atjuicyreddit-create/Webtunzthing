@@ -18,6 +18,12 @@ export async function Header() {
 
         <div className="flex items-center gap-1.5 sm:gap-2">
           <ThemeToggle />
+          {/* Studio is admin-only for now; a paid tier for other accounts comes later. */}
+          {isAdmin && (
+            <Link href="/studio" className="btn btn-quiet !min-h-11 whitespace-nowrap !px-3 text-sm sm:!px-4">
+              Studio
+            </Link>
+          )}
           {isAdmin && (
             <Link href="/admin" className="btn btn-quiet !min-h-11 whitespace-nowrap !px-3 text-sm sm:!px-4">
               Admin
