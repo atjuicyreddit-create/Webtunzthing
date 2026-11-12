@@ -11,6 +11,7 @@ import { defaultLayout, layoutHash, letterPanel } from "@/lib/studio/panels/lett
 import { panelsFingerprint } from "@/lib/studio/panels/gate";
 import { buildFor, loadPanelContext, runAutoQa, startPanelTake } from "@/lib/studio/panels/panels";
 import { lintPanelPrompt, scriptHash } from "@/lib/studio/panels/prompt";
+import { riskTag } from "@/lib/studio/script/checks";
 import { LETTER_FIELDS, QA_TICKS, defaultElement, type LetterEl, type LetterKind } from "@/lib/studio/panels/types";
 import { morningBrewMastersAvailable, parseLetterReference, readMorningBrewMaster } from "@/lib/studio/seed/morningBrew";
 
@@ -98,6 +99,12 @@ export async function runPrecheck(form: FormData) {
   go(page(c.id, c.ep, at(key, "prompt")), { ok: `Pre-check done: ${r.result.ok ? "no problems found" : `${r.result.issues.length} issue(s) to read`} (${r.result.note})` });
 }
 
+/** A panel's take limit: its own "Takes: N" budget from the script notes (guidelines rule 10), else the setting. */
+function takeLimit(c: Ctx, key: string): number {
+  const notes = c.pc.panels.find((p) => p.panel_key === key)?.notes;
+  return riskTag(notes).takes ?? c.pc.settings?.max_takes_per_panel ?? 3;
+}
+
 async function canGenerate(c: Ctx, key: string): Promise<string | null> {
   const b = await buildFor(c.supabase, c.pc, key);
   if (!b || !c.pc.story) return "Couldn't build the prompt.";
@@ -105,9 +112,9 @@ async function canGenerate(c: Ctx, key: string): Promise<string | null> {
   if (lint.errors.length) return `the free check failed (${lint.errors[0]})`;
   const row = c.pc.rows.get(key);
   if (row?.precheck_hash !== b.built.hash) return "run Claude's pre-check on the current prompt first";
-  const max = c.pc.settings?.max_takes_per_panel ?? 3;
+  const max = takeLimit(c, key);
   const used = c.pc.takes.filter((x) => x.panel_key === key && x.kind === "final" && (x.status === "ready" || x.status === "pending")).length;
-  if (used >= max) return `it already has ${used} of its ${max} takes (raise the limit in Studio settings)`;
+  if (used >= max) return `it already has ${used} of its ${max} takes (raise its “Takes:” budget in the script notes)`;
   if (c.pc.takes.some((x) => x.panel_key === key && x.status === "pending")) return "a take is still generating";
   return null;
 }
@@ -162,19 +169,21 @@ export async function fixTake(form: FormData) {
   if (/\band\b.*\band\b|;/.test(change)) go(page(c.id, c.ep, at(key, "takes")), { error: "A fix changes one thing at a time. Split it into separate fixes." });
   const take = c.pc.takes.find((x) => x.id === takeId && x.panel_key === key && x.storage_path);
   if (!take) go(page(c.id, c.ep, at(key, "takes")), { error: "Only a finished image can be fixed." });
-  const max = c.pc.settings?.max_takes_per_panel ?? 3;
+  const max = takeLimit(c, key);
   const used = c.pc.takes.filter((x) => x.panel_key === key && x.kind === "final" && (x.status === "ready" || x.status === "pending")).length;
-  if (used >= max) go(page(c.id, c.ep, at(key, "takes")), { error: `Panel ${i + 1} already has ${used} of its ${max} takes. Raise the limit in Studio settings to go on.` });
+  if (used >= max) go(page(c.id, c.ep, at(key, "takes")), { error: `Panel ${i + 1} already has ${used} of its ${max} takes. Raise its “Takes:” budget in the script notes to go on.` });
   const fix = { takeId, change };
   const b = await lintOrStop(c, key, fix);
   const pre = await precheckPrompt(c.supabase, { projectId: c.id, episodeId: c.ep }, b.built, b.panel, i + 1, b.lint.warnings);
   if (!pre.ok) go(page(c.id, c.ep, at(key, "takes")), { error: pre.reason });
-  if (!pre.result.ok) go(page(c.id, c.ep, at(key, "takes")), { error: `Claude's pre-check stopped this fix: ${pre.result.issues.join(" ")} (${pre.result.note})` });
+  // The pre-check advises; it doesn't block (same as a new take). It kept stopping simple fixes over house-rule
+  // wording it was told to ignore (Episode 2). Its notes are saved and shown with the result.
   const r = await startPanelTake(c.supabase, c.pc, key, fix);
   if (!r.ok) go(page(c.id, c.ep, at(key, "takes")), { error: r.reason });
   await afterPanelChange(c, `Panel ${i + 1}: fix`);
   refresh(c.id);
-  go(page(c.id, c.ep, at(key, "takes")), { ok: r.dryRun ? "Dry run: placeholder fix logged, $0." : `Fixing panel ${i + 1}: “${change}” (about $${r.estimate.toFixed(2)}).` });
+  const notes = pre.result.ok ? "" : ` Pre-check notes: ${pre.result.issues.slice(0, 3).join(" ")}`.slice(0, 600);
+  go(page(c.id, c.ep, at(key, "takes")), { ok: r.dryRun ? "Dry run: placeholder fix logged, $0." : `Fixing panel ${i + 1}: “${change}” (about $${r.estimate.toFixed(2)}).${notes}` });
 }
 
 // ---------------------------------------------------------------- takes: QA, choose, reject
@@ -338,6 +347,8 @@ export async function importMasters(form: FormData) {
   const c = await ctx(form);
   if (!c.pc.story?.project.is_test) go(page(c.id, c.ep), { error: "Masters can only be imported into a test project." });
   if (!morningBrewMastersAvailable()) go(page(c.id, c.ep), { error: "The test pack isn't on this computer (local only)." });
+  const { data: epRow } = await c.supabase.from("studio_episodes").select("number").eq("id", c.ep).maybeSingle();
+  if (epRow?.number !== 1) go(page(c.id, c.ep), { error: "The Morning Brew masters are Episode 1's art. They can only be imported into Episode 1." });
   const layouts = parseLetterReference();
   let n = 0;
   for (const [idx, panel] of c.pc.panels.entries()) {

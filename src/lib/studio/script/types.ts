@@ -61,6 +61,11 @@ export const CHECKS = [
   { key: "vote", label: "Serial: ends on a scoped vote question with a backup" },
   { key: "format", label: "Format decided (one-off or serial, and the end card)" },
   { key: "pacing", label: "Hook in panel 1, a gap before the twist, a button at the end" },
+  {
+    key: "production",
+    label:
+      "Comic production (guidelines section 7): size changes flagged with 4-6 takes; one complex physical action per panel (split crowded panels); labels over 4 words get a close-up or callout; nothing described as 'X-shaped'; any limb through a window or door is named exactly; one camera side kept when something moves inside to outside; every panel has a render risk and a take budget (about 2 takes a panel)",
+  },
 ] as const;
 export type CheckKey = (typeof CHECKS)[number]["key"];
 

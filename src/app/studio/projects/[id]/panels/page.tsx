@@ -14,6 +14,7 @@ import { estimatePrecheck, estimateVision } from "@/lib/studio/panels/ai";
 import { panelState, panelsFingerprint, type PanelState } from "@/lib/studio/panels/gate";
 import { buildFor, loadPanelContext } from "@/lib/studio/panels/panels";
 import { lintPanelPrompt, scriptHash } from "@/lib/studio/panels/prompt";
+import { riskTag } from "@/lib/studio/script/checks";
 import { morningBrewMastersAvailable } from "@/lib/studio/seed/morningBrew";
 import { formatUsd } from "@/lib/studio/settings";
 import { loadStructure } from "@/lib/studio/structure/structure";
@@ -129,7 +130,8 @@ export default async function PanelsPage({
   const { data: spendRows } = await supabase.from("studio_ai_calls").select("actual_usd,estimated_usd").eq("episode_id", episode.id).eq("kind", "image").in("status", ["done", "reserved"]);
   const spent = (spendRows ?? []).reduce((n, r) => n + Number(r.actual_usd ?? r.estimated_usd ?? 0), 0);
   const lessonsForQa = sel ? await activeLessons(supabase, "art", id, sel.characters) : [];
-  const canImport = project.is_test && morningBrewMastersAvailable() && pc.panels.some((p) => !pc.takes.some((x) => x.panel_key === p.panel_key && x.kind === "imported" && !x.rejected));
+  // The test-pack masters are Episode 1's art: never offer them on a later episode.
+  const canImport = project.is_test && episode.number === 1 && morningBrewMastersAvailable() && pc.panels.some((p) => !pc.takes.some((x) => x.panel_key === p.panel_key && x.kind === "imported" && !x.rejected));
 
   return shell(
     <>
@@ -138,7 +140,7 @@ export default async function PanelsPage({
       <JobPoller key={pendingJobs.join(",") || "none"} jobIds={pendingJobs} />
       <div className="s-card mt-3 flex flex-wrap items-center justify-between gap-3 p-4">
         <p className="text-sm">
-          Episode {episode.number}: {pc.panels.length} panels · images {formatUsd(spent)} of {formatUsd(settings.episode_image_cap_usd)} · up to {settings.max_takes_per_panel} takes a panel
+          Episode {episode.number}: {pc.panels.length} panels · images {formatUsd(spent)} of {formatUsd(settings.episode_image_cap_usd)} · takes per panel follow each panel&rsquo;s budget (default {settings.max_takes_per_panel})
         </p>
         {canImport && (
           <form>
@@ -175,7 +177,7 @@ export default async function PanelsPage({
             precheckCurrent={selRow.precheck_hash === built.built.hash}
             precheckEstimate={estimatePrecheck(settings, built.built, sel, selIndex + 1)}
             takesUsed={selTakes.filter((x) => x.kind === "final" && (x.status === "ready" || x.status === "pending")).length}
-            maxTakes={settings.max_takes_per_panel}
+            maxTakes={riskTag(sel.notes).takes ?? settings.max_takes_per_panel}
             price={imagePrice(settings, "2K")}
             pending={selTakes.some((x) => x.status === "pending")}
             dryRun={settings.dry_run}

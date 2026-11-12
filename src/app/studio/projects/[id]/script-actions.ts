@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { withParams } from "@/lib/studio/url";
 import { requireStudio } from "@/lib/studio/auth";
-import { freeChecks } from "@/lib/studio/script/checks";
+import { freeChecks, riskTag } from "@/lib/studio/script/checks";
 import { runScriptAction, type DraftScript } from "@/lib/studio/script/prompts";
 import {
   afterScriptChange,
@@ -253,6 +253,7 @@ export async function draftScript(form: FormData) {
     clock: clip(p.clock ?? "", 20) || null,
     matches_key: p.matches_panel > 0 && p.matches_panel <= i ? keys[p.matches_panel - 1] : null,
     text_items: (p.text_items ?? []).slice(0, 10).map((x) => ({ text: clip(x.text ?? "", 120), how: x.how === "model" ? "model" : "lettered" })),
+    notes: clip(p.notes ?? "", 1000) || null,
   }));
   if (rows.length) await c.supabase.from("studio_script_panels").insert(rows);
 
@@ -315,6 +316,11 @@ export async function approveScript(form: FormData) {
   const versions = await listVersions(c.supabase, c.ep);
   const cur = versions[0];
   if (!cur?.check_result) go(page(c.id, c.ep, "#gate"), { error: "Run Claude's script check on this version first." });
+  // Guidelines section 7, rule 10: every panel carries a render risk and a take budget before the script is final.
+  const untagged = panels.map((p, i) => ({ n: i + 1, t: riskTag(p.notes) })).filter((x) => !x.t.risk || x.t.takes === null).map((x) => x.n);
+  if (untagged.length) {
+    go(page(c.id, c.ep, "#gate"), { error: `Tag every panel with a render risk and a take budget first (notes: “Risk: high · Takes: 5”). Missing on panel ${untagged.slice(0, 8).join(", ")}${untagged.length > 8 ? "…" : ""}.` });
+  }
   const issues = freeChecks(panels, { props, characters: s.characters.map((x) => x.name), fork, serial: s.project.format === "serial" });
   const fails = cur.check_result.items.filter((x) => x.status === "fail").length;
   const note = clip(t(form, "note"), 500);

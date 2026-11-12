@@ -31,6 +31,7 @@ export type DraftScript = {
     clock: string;
     matches_panel: number;
     text_items: { text: string; how: "lettered" | "model" }[];
+    notes?: string;
   }[];
   prop_table: { name: string; owner: string; rule: string }[];
   fork: { question: string; in_bounds: string; locked: string; backup_pick: string; branches: { title: string; summary: string; rejoins: string }[] };
@@ -93,7 +94,10 @@ Write the script panel by panel, in the Morning Brew format. For each panel: tit
 action (the visual, specific enough to draw); caption (7 words or fewer, only what the picture can't show, "" if none); dialogue (within each character's voice guardrails);
 size (small, mid or tall); gap_after in px at 800 wide (150-300 same scene, 500-800 scene jump, 1000+ before the punchline); props in the panel with location and state;
 clock time if a clock is visible (e.g. "6:43", "" if none); matches_panel (the number of an EARLIER panel whose camera this repeats, 0 if none);
-text_items: every piece of text in the art, marked "lettered" (added in code) or "model" (only short prop labels may be drawn by the image model).
+text_items: every piece of text in the art, marked "lettered" (added in code) or "model" (only short prop labels may be drawn by the image model);
+notes: start with the render-risk tag "Risk: low|medium|high · Takes: N" (about 2 takes a panel; a size change is high with 4 to 6), then any staging notes.
+Follow section 7 of the guidelines (comic production): one complex physical action per panel, a close-up or callout for any label over 4 words,
+never describe anything as "X-shaped", name exactly which limb pokes through a window or door, and keep one camera side when something moves inside to outside.
 No sound effects. Real-world steps in order. Plant before payoff. Hook in panel 1, a big gap before the twist, a button at the end.
 Also give a prop table (name, owner, rule) for every story prop${serial ? `, and the vote end card: a scoped question, what's in bounds, what's locked, a backup pick (used if there are too few comments), and 2 or 3 branches, each with the milestone it rejoins` : ` (fork: leave every field empty and branches empty)`}.`,
       maxTokens: 32000,
@@ -114,6 +118,7 @@ Also give a prop table (name, owner, rule) for every story prop${serial ? `, and
             clock: str,
             matches_panel: { type: "integer" },
             text_items: arr(obj({ text: str, how: { type: "string", enum: ["lettered", "model"] } })),
+            notes: str,
           }),
         ),
         prop_table: arr(obj({ name: str, owner: str, rule: str })),
@@ -121,9 +126,9 @@ Also give a prop table (name, owner, rule) for every story prop${serial ? `, and
       }),
       dryRun: {
         panels: [
-          { title: "Hook (dry run)", shot: "exterior, establishing", camera: "wide", characters: [], action: "A placeholder opening image.", caption: "Somewhere. Far too early.", dialogue: [], size: "tall", gap_after: 250, props: [], clock: "", matches_panel: 0, text_items: [{ text: "Somewhere. Far too early.", how: "lettered" }] },
-          { title: "Setup (dry run)", shot: "interior", camera: "mid", characters: s.characters[0] ? [s.characters[0].name] : [], action: "The lead sees the deadline.", caption: "This caption is deliberately far too long for the rule.", dialogue: [], size: "mid", gap_after: 250, props: [{ name: "note", location: "door", state: "pinned" }], clock: "6:40", matches_panel: 0, text_items: [] },
-          { title: "Button (dry run)", shot: "exterior", camera: "wide", characters: [], action: "Same angle as panel 1, later.", caption: "", dialogue: [], size: "tall", gap_after: 0, props: [], clock: "6:30", matches_panel: 1, text_items: [] },
+          { title: "Hook (dry run)", shot: "exterior, establishing", camera: "wide", characters: [], action: "A placeholder opening image.", caption: "Somewhere. Far too early.", dialogue: [], size: "tall", gap_after: 250, props: [], clock: "", matches_panel: 0, text_items: [{ text: "Somewhere. Far too early.", how: "lettered" }], notes: "Risk: low · Takes: 2" },
+          { title: "Setup (dry run)", shot: "interior", camera: "mid", characters: s.characters[0] ? [s.characters[0].name] : [], action: "The lead sees the deadline.", caption: "This caption is deliberately far too long for the rule.", dialogue: [], size: "mid", gap_after: 250, props: [{ name: "note", location: "door", state: "pinned" }], clock: "6:40", matches_panel: 0, text_items: [], notes: "Risk: medium · Takes: 2" },
+          { title: "Button (dry run)", shot: "exterior", camera: "wide", characters: [], action: "Same angle as panel 1, later.", caption: "", dialogue: [], size: "tall", gap_after: 0, props: [], clock: "6:30", matches_panel: 1, text_items: [], notes: "" },
         ],
         prop_table: [{ name: "note", owner: "Placeholder", rule: "Pinned to the door (dry run)." }],
         fork: serial
@@ -140,8 +145,10 @@ Run the script check. For EACH of these keys give pass, fail or na (na only when
 and a one-line note saying exactly what's wrong and where, or why it passes. Do NOT rewrite the script and do not suggest that you'll fix it; Tom decides.
 ${CHECKS.map((c) => `- ${c.key}: ${c.label}`).join("\n")}
 Finish with a two-sentence summary.`,
-    maxTokens: 16000,
-    effort: "high" as Effort,
+    // Medium effort: at "high" a 15-panel check spent 13-16K tokens mostly thinking and was cut off once
+    // (charged in full). The checklist answer itself is short.
+    maxTokens: 24000,
+    effort: "medium" as Effort,
     schema: obj({
       summary: str,
       items: arr(obj({ key: { type: "string", enum: CHECKS.map((c) => c.key) }, status: { type: "string", enum: ["pass", "fail", "na"] }, panels: { type: "array", items: { type: "integer" } }, note: str })),

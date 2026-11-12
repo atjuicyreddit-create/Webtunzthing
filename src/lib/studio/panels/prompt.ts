@@ -52,6 +52,8 @@ export function scriptHash(p: ScriptPanel): string {
   return createHash("sha256").update(JSON.stringify(body)).digest("hex").slice(0, 24);
 }
 
+const LABELLED = /\b(tin|jar|bottle|sign|label|note|card|tag|box|book|plaque|packet|bag|crate|letter|list|poster|sack|can)\b/i;
+
 const mentions = (text: string, name: string) => {
   const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const short = name.trim().split(/\s+/).pop() ?? name;
@@ -88,10 +90,10 @@ export function buildPanelPrompt(input: {
   }
   const locations = input.episodeAssets.filter((a) => a.kind === "location" && input.pickedPaths[a.id]);
   const placeText = `${p.shot ?? ""} ${p.action ?? ""} ${p.title}`;
-  // A named location wins. Otherwise the only location is assumed, unless the shot is outside (an exterior
-  // panel must not get the kitchen as its reference).
-  const outside = /\b(exterior|outside|outdoors)\b/i.test(placeText);
-  const setting = locations.find((l) => mentions(placeText, l.name)) ?? (locations.length === 1 && !outside ? locations[0] : null);
+  // An outside shot gets no indoor setting at all, even if the text mentions "the kitchen window"
+  // (Episode 2, panel 15: the pre-check caught the kitchen reference on an exterior). The shot field decides.
+  const outside = /\b(exterior|outside|outdoors)\b/i.test(`${p.shot ?? ""} ${p.camera ?? ""}`) || (!p.shot?.trim() && /\b(exterior|outside|outdoors)\b/i.test(placeText));
+  const setting = outside ? null : locations.find((l) => mentions(placeText, l.name)) ?? (locations.length === 1 ? locations[0] : null);
   if (setting) refs.push({ label: `${setting.name} (setting)`, path: input.pickedPaths[setting.id]! });
   const propAssets = input.episodeAssets.filter((a) => a.kind === "prop" && input.pickedPaths[a.id]);
   for (const pr of p.props) {
@@ -138,9 +140,13 @@ export function buildPanelPrompt(input: {
             const info = propInfo.get(pr.name.trim().toLowerCase());
             const label = modelText.find((t) => t.toLowerCase().includes(pr.name.toLowerCase()));
             const n = refIndex(`${info?.name ?? pr.name} design`);
+            // Capitalised label words ("GROWING CAKE tin") invite the model to draw them as text: lower-case them.
+            const name = pr.name.replace(/\b[A-Z]{2,}\b/g, (w) => w.toLowerCase());
+            // Only props that could carry writing get "blank label" (not an armchair or a marrow).
+            const labelled = LABELLED.test(`${pr.name} ${pr.state}`);
             return [
-              `${pr.name}${pr.location ? ` (${pr.location})` : ""}${pr.state ? `, ${pr.state}` : ""}`,
-              label ? `label reads exactly "${label}"` : "blank label",
+              `${name}${pr.location ? ` (${pr.location})` : ""}${pr.state ? `, ${pr.state}` : ""}`,
+              label ? `label reads exactly "${label}"` : labelled ? "blank label" : "",
               n ? `as in reference ${n}` : "",
             ]
               .filter(Boolean)
@@ -150,7 +156,14 @@ export function buildPanelPrompt(input: {
         ".",
     });
   }
-  if (p.clock?.trim()) blocks.push({ name: "7. Clock", text: "CLOCK: a blank round clock face in its usual spot, with no hands and no numbers (the time is painted in later)." });
+  if (p.clock?.trim()) {
+    blocks.push({
+      name: "7. Clock",
+      text: outside
+        ? "CLOCK OR WATCH: any clock or watch face shown is blank, with no hands and no numbers (the time is painted in later)."
+        : "CLOCK: a blank round clock face in its usual spot, with no hands and no numbers (the time is painted in later).",
+    });
+  }
   const castLine = inPanel.length || unknown.length ? `Only these characters: ${[...inPanel.map((c) => c.name), ...unknown].join(", ")}. No other characters and no extra copies.` : "No characters.";
   blocks.push({
     name: "8. Must not appear",
@@ -161,7 +174,14 @@ export function buildPanelPrompt(input: {
   if (p.caption?.trim()) space.push("frame the shot so the top fifth of the picture is calm, uncluttered background (wall, ceiling or sky) that is part of the same scene");
   if (p.dialogue.length) space.push("keep some calm background beside the speaker's head");
   if (space.length) blocks.push({ name: "9. Space for lettering", text: `COMPOSITION: ${space.join("; ")}. Full-bleed artwork, edge to edge: no borders, frames, gutters or empty bands.` });
-  if (input.matched) blocks.push({ name: "Matched shot", text: `MATCHED SHOT: same camera, same framing, same distance as reference ${refIndex(`Panel ${input.matched.number} (camera to match)`) || 1}.` });
+  if (input.matched) {
+    // Never point at "reference 1" when the pair has no image yet: that was the character sheet (Episode 2, panel 15).
+    const n = refIndex(`Panel ${input.matched.number} (camera to match)`);
+    blocks.push({
+      name: "Matched shot",
+      text: n ? `MATCHED SHOT: same camera, same framing, same distance as reference ${n}.` : `MATCHED SHOT: same camera, same framing and same distance as panel ${input.matched.number} of this episode.`,
+    });
+  }
   if (input.fix) blocks.push({ name: "Fix", text: `EDIT of reference 1: keep everything identical, and change only this: ${sentence(input.fix.change)}` });
   const lessons = input.lessons.map((l) => ({ id: l.id, lesson: l.lesson }));
   if (lessons.length) blocks.push({ name: "Lessons", text: `LESSONS: ${lessons.map((l) => sentence(l.lesson)).join(" ")}` });

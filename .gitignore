@@ -22,3 +22,6 @@ studio-reference/
 .DS_Store
 *.tsbuildinfo
 .vercel
+
+# Local backups made before edits (may hold copies of studio-reference/, which stays private)
+backups/
